@@ -171,7 +171,7 @@ _tifu _adbman_dialogvars
 function _adbman_tb(){
 	# $1=text, $2=border width, $3=border height
 	local i j k l;
-	set -xv
+	# set -xv
 	if [ -n "$1" ]; then
 		((i=$WIDTHMIN)); #Width
 		j=$(echo "$1" | sed '$=;d'); #Height
@@ -202,14 +202,13 @@ function _adbman_tb(){
 	fi;
 	[ -n "$3" ] && [ $3 -gt 0 ] && ((j+=$3))
 	echo "$i" "$j";
-	set +xv
+	# set +xv
 }
 
 #»PARAMETER LOG
 #»Display variables Dialog
 #»_adbman_paralog 'Title' [ ["/dir/file"] | ["VAR1"] ["VAR2"] .. ]
 function _adbman_paralog(){
-set +xv
 local MNU='' LBL='' TTL="$1" BXT='times'
 local LBLV='' LBLT='' g='' l='';
 local -i DXC=0 PDW=0 PDH=0;
@@ -1084,200 +1083,6 @@ function _adbman_log(){
 
 #»ADB EXEC
 #»Execute adb
-function _adbman_execold(){
-	# call: LOG="$(_adbman_exec "")"
-	local APPNAME="$1" DTITLE="$2" DIABOX="$3" LABEL
-	local ADBOPT=$(sed '/^$/d' <<<"${4//'|'/$'\n'}") #option
-	local -i WDTH=50 HGHT=0 SIZE=0 DIAOUT=1 DIACODE=0 APPIX=0
-	local -a DIALOG DIALIST TB
-	local ADBCOM ADBOUT ADBCODE LOG OUT MESSAGE
-	# Adjust WDTH/HGHT
-	TB=($(_adbman_tb "$ADBOPT"))
-	if [ "${APP_sys}" == "SYSTEM" ];
-		then LABEL="Package:${APPCHS}$APPNAME";
-		else LABEL="Package:${APPCHT}$APPNAME";
-	fi
-
-	((TB[0]+=10))
-	[ ${TB[0]} -gt $WDTH ] && ((WDTH=${TB[0]}))
-	((HGHT+=${TB[1]}))
-	DIALOG=(dialog "$DIAOPT" \
-	"$DTITLE" "$DIABOX")
-	case "$DIABOX" in
-	"--yesno")# Yes/No dialog to execute
-		case "$DTITLE" in
-		'Modify Permissions')
-			LABEL="$LABEL\n\nPermissions:"
-			LABEL="$LABEL\n$(echo "$ADBOPT" |\
-			sed 's/grant/\\Z2grant\\Zn /g' |\
-			sed 's/revoke/\\Z1revoke\\Zn/g')"
-			LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
-			;;
-		'Backup App')
-			LABEL="$LABEL\nDirectory:$ADBMANB$ADBMANA"
-			LABEL="$LABEL\n\nBackup:"
-			LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
-			;;
-		esac
-		DIALOG+=("$LABEL" $HGHT $WDTH)
-		DIAOUT=$("${DIALOG[@]}" --output-fd 1)
-		DIACODE=$?
-		;;
-	"--menu")# Menu dialog for option to execute
-		# substitute ':' with newline in $4 for array
-		readarray -t DIALIST <<<"${ADBOPT//:/$'\n'}"
-		DIALOG+=("$LABEL" $HGHT $WDTH $SIZE)
-		DIAOUT=$("${DIALOG[@]}" "${DIALIST[@]}" --output-fd 1)
-		DIACODE=$?
-		ADBOPT="$(sed -n "/$DIAOUT/s/.*(\(.*\)).*/\1/p" <<<"$ADBOPT")"
-		;;
-	esac
-	# echo "W:$WDTH|H:$HGHT||W:${TB[0]}|H:${TB[1]}"
-	# echo "DIAOUT:$DIAOUT | adb option:$ADBOPT"
-	# echo "EXIT:$DIACODE"
-	# echo "$LABEL"
-	# exit
-	# Execute adb option if answer=yes
-	if [ $DIACODE -eq 0 ]; then
-	DIABOX="--msgbox"
-	# Case first parameter in $ADBOPT
-	case "${ADBOPT%% *}" in
-	'dump')
-		echo "$APPSTATS" >"$ADBMANP/$APPNAME"
-		ADBCODE=$?
-		if [ $ADBCODE -eq 0 ]; then
-			LABEL="$LABEL\n\Z2Success! Dumped to:\Zn"
-		else
-			LABEL="$LABEL\n\Z1Failed! Unable to write:\Zn"
-		fi
-		LABEL="$LABEL\n$ADBMANP/$APPNAME"
-		_adbman_log "[\$]$ADBCOM >$ADBMANP/$APPNAME"
-		_adbman_log "[$ADBCODE]"
-		;;
-	'grant'|'revoke')
-		#Reset LABEL
-		if [ "${APP_sys}" == "SYSTEM" ];
-			then LABEL="Package:\n${APPCHS}$APPNAME";
-			else LABEL="Package:\n${APPCHT}$APPNAME";
-		fi
-		LABEL="$LABEL\n\nPermissions:"
-		j=$(sed '$=;d' <<<"$ADBOPT")
-		for ((i=1; i<=$j; i++)); do
-			l=$(sed -n "${i}p" <<<"$ADBOPT")
-			# insert APPNAME in grant/revoke permission
-			ADBCOM=$(sed "s/\s/ $APPNAME /" <<<"$l")
-			ADBCOM="adb shell pm $ADBCOM"
-			LABEL="$LABEL\n>$ADBCOM"
-			((WDTH=${#ADBCOM}+10))
-			# ADBOUT="$($ADBCOM 2>&1)"
-			# ADBCODE=$?
-			LABEL="$LABEL\n$l"
-			if [ $ADBCODE -eq 0 ]; then
-				# App Menu Modified switch
-				APPIX=1
-				LOG="${ADBOUT//$'\n'/ }"
-				LABEL="$LABEL\n\Z2Success!\Zn"
-				((HGHT+=1))
-			else
-				# Parse Error Output to log 1 line
-				LOG=$(sed '1,3!d;1{/^$/d}' <<<"$ADBOUT")
-				l="${l##* }" #get last parameter (perm)
-				LOG=`sed "s/$l //;s/$APPNAME/Package/" \
-					<<<"${LOG//$'\n'/ }"`
-				# Parse Error Output to dialog msg
-				OUT=$(sed 's/:\s/:\\n/g' <<<"$LOG")
-				LABEL="$LABEL\n\Z1$OUT\Zn"
-				((HGHT+=3))
-			fi
-			# _adbman_log "[\$]$ADBCOM"
-			# _adbman_log "[$ADBCODE]$LOG"
-		done
-		;;
-	'backup')
-		#Reset LABEL
-		if [ "${APP_sys}" == "SYSTEM" ];
-			then LABEL="Package:${APPCHS}$APPNAME";
-			else LABEL="Package:${APPCHT}$APPNAME";
-		fi
-		LABEL="$LABEL\nDirectory:$ADBMANB$ADBMANA"
-		LABEL="$LABEL\n\nBackup:"
-		LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
-		j=$(sed '$=;d' <<<"$ADBOPT")
-		for ((i=1; i<=$j; i++)); do
-			l=$(sed -n "${i}p" <<<"$ADBOPT")
-			LABEL="$LABEL\n$l"
-			# Add file extension
-			l=$(echo "$l" | sed 's/$/ [/' |\
-				sed 's/.*-\(apk\).*/\0 +\1' |\
-				sed 's/.*-\(obb\).*/\0 +\1' |\
-				sed 's/.*-\(shared\).*/\0 +\1' | sed 's/$/].adb')
-			# insert path and file name, add package name
-			l=$(echo "$l" |\
-				sed "s|\[|-f \"$ADBMANA/$APPNAME[\"|" |\
-				sed "s|$| $APPNAME")
-			ADBCOM="adb $l"
-			LABEL="$LABEL\n>$ADBCOM"
-			((WDTH=${#ADBCOM}+10))
-			# ADBOUT="$($ADBCOM 2>&1)"
-			# ADBCODE=$?
-			if [ $ADBCODE -eq 0 ]; then
-				# App Menu Modified switch
-				APPIX=1
-				LOG="${ADBOUT//$'\n'/ }"
-				LABEL="$LABEL\n\Z2Success!\Zn"
-				((HGHT+=1))
-			else
-				# Parse Error Output to log 1 line
-				LOG=$(sed '1,3!d;1{/^$/d}' <<<"$ADBOUT")
-				# l="${l##* }" #get last parameter (perm)
-				# LOG=$(sed "s/$l //;s/$APPNAME/Package/" \
-				#   <<<"${LOG//$'\n'/ }")
-				# Parse Error Output to dialog msg
-				OUT="$LOG"
-				LABEL="$LABEL\n\Z1$OUT\Zn"
-				((HGHT+=3))
-			fi
-			# _adbman_log "[\$]$ADBCOM"
-			# _adbman_log "[$ADBCODE]$LOG"
-		done
-		;;
-	*)
-		ADBCOM="adb shell pm $ADBOPT $APPNAME" # exec adb
-		LABEL="$LABEL\n>$ADBCOM"
-		((WDTH=${#ADBCOM}+10))
-		# ADBOUT="$($ADBCOM 2>&1)"
-		# ADBCODE=$?
-		# Parse Error Output to log 1 line
-		LOG=$(sed '1,3!d;1{/^$/d}' <<<"$ADBOUT")
-		if [ "$ADBCODE" -eq 0 ]; then
-			# App Menu Modified switch
-			APPIX=1
-			LABEL="$LABEL\n\Z2$ADBOUT\Zn"
-		else
-			# Parse Error Output to dialog msg
-			OUT=$(echo "$LOG" |\
-		sed 's/:\s/:\\n/g' |\
-		sed 's/for\s/for\\n/g')
-			LABEL="$LABEL\n\Z1$OUT\Zn"
-		fi
-		# _adbman_log "[\$]$ADBCOM"
-		# _adbman_log "[$ADBCODE]${LOG//$'\n'/ }"
-		;;
-	esac
-	echo "LOG=$LOG"
-	echo "OUT=$OUT"
-	echo "LABEL=${LABEL//'\n'/$'\n'}"
-	# Show output message dialog
-	DIALOG=(dialog "$DIAOPT" \
-	"$DTITLE" "$DIABOX" "$LABEL" $HGHT $WDTH)
-	MESSAGE=$("${DIALOG[@]}" --output-fd 1)
-	fi
-	echo "$OUT"
-	return $APPIX
-}
-
-#»ADB EXEC
-#»Execute adb
 # call: LABEL="$(_adbman_exec)"
 function _adbman_exec(){
 	eval "$CLEARDIAVARS";
@@ -1793,6 +1598,8 @@ while true; do
 		'S')#Settings
 			;;
 		'T')#Tasks
+			;;
+		'U')#User
 			;;
 		*)#Unknown
 			echo "Unknown Choice in Main Menu:$DITAG" &&\
