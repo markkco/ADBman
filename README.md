@@ -1,6 +1,6 @@
 # ADBman - Android debug bridge (adb) CLI dialog script
 ## *WARNING!*
-* Using Android debug bridge can render your android device useless! Be sure you know what you are doing. I am not responsible for any damage to your device you make by using this script!
+**Using Android debug bridge can render your android device useless! Be sure you know what you are doing. I am not responsible for any damage to your device you make by using this script!**
 
 ## ABOUT
 The purpose of this script is a convenience when working with adb.
@@ -19,6 +19,6 @@ Created in termux self-debug environment.
 * Add Tasks
 
 ## Known issues
-* dumpsys diskstats does not show recent package storage change
+* `adb shell dumpsys diskstats` does not show recent package storage change
 
 
