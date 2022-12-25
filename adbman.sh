@@ -229,7 +229,8 @@ local -i DXC=0 PDW=0 PDH=0;
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
 [ -n "$DITAG" ] && LBLV+=" |DITAG=$DITAG|";
 [ -n "$DINPUT" ] && LBLV+=":|DINPUT=$DINPUT|";
-[ -n "$APPNAME" ] && LBLV+="\n|APPNAME=$APPNAME|";
+[ -n "$APPUSER" ] && LBLV+="\n|APPUSER=$APPUSER|";
+[ -n "$APPNAME" ] && LBLV+=" |APPNAME=$APPNAME|";
 [ -n "$DIASTATE" ] &&\
 	LBLV+="\n\Zu|DIASTATE|\Zn\n${DIASTATE//$'\n'/'\n'}\n——————————";
 [ -n "$ADBOPT" ] &&\
@@ -330,6 +331,8 @@ function _adbman_dialog(){
 			TB=($(_adbman_tb "$MENU" 6 2)) && ((HGHT+=${TB[1]}));
 		[ "$DIABOX" == "--checklist" ] &&\
 			TB=($(_adbman_tb "$MENU" 15 2)) && ((HGHT+=${TB[1]}));
+		[ "$DIABOX" == "--radiolist" ] &&\
+			TB=($(_adbman_tb "$MENU" 15 2)) && ((HGHT+=${TB[1]}));
 		[ "$DIABOX" == "--inputmenu" ] &&\
 			TB=($(_adbman_tb "$MENU" 15)) && ((HGHT+=${TB[1]}*3+2));
 		[ "${TB[0]}" -gt "$WDTH" ] && WDTH=${TB[0]};
@@ -344,6 +347,7 @@ function _adbman_dialog(){
 		# Only nonempty option params included
 		if [ "$DIABOX" == "--menu" ] ||\
 			[ "$DIABOX" == "--checklist" ] ||\
+			[ "$DIABOX" == "--radiolist" ] ||\
 			[ "$DIABOX" == "--inputmenu" ]; then
 			[ -n "$BOKAY" ] &&\
 				DIALOG+=('--ok-label' "$BOKAY");
@@ -397,6 +401,12 @@ function _adbman_dialog(){
 		'--checklist')
 			[ "${DIAOUT%% *}" == "HELP" ] &&\
 				DITAG="${DIAOUT#* }" ||	DITAG=" $DIAOUT ";
+			# DITAG for checklist returns list 
+			# Use: eval "$RETCHECKLIST" to extract list to MENU
+			;;
+		'--radiolist')
+			[ "${DIAOUT%% *}" == "HELP" ] &&\
+				DITAG="${DIAOUT#* }" ||	DITAG="$DIAOUT";
 			;;
 		esac;
 	fi;
@@ -456,6 +466,11 @@ _tifu _adbman_datavars
 
 #»MENU LISTS
 function _adbman_menuvars(){
+#»Users Menu Options Dialog
+MANUSR="$(adb shell pm list users |\
+	sed -n 's/.*{\(.*\)}.*/\1/p' |\
+	sed 's/:/ [/2;s/$/]:off/' |\
+	sed '/Owner/s/:off/:on/')"
 #»Main Menu Options Dialog
 MANMOD=\
 'A:Applications [APPLTN]
@@ -1406,7 +1421,7 @@ while true; do
 eval "$CLEARDIAVARS";
 if [ $APPIX -eq 1 ]; then
 	_tifu _adbman_appinfo; APPIX=0; fi;
-DTITLE="Application Menu"; DIABOX='--menu'; BCNCL='Back'
+DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BCNCL='Back'
 # Refresh APPINFO only if APPIX changed and reset APPIX
 eval "$APPMODLABEL"; # LABEL for App Menu
 eval "$APPMODMENU"; # MENU from APPMOD
@@ -1507,7 +1522,7 @@ SORT=("$SORTAZ" \
 while true; do
 	eval "$CLEARDIAVARS";
 	_tifu _adbman_applist "${SORT[$s]}"
-	DTITLE="Application List [$APPLFN/$APPLTN] ${SORT[$s]}"
+	DTITLE="Application List [User:$APPUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
 	DIABOX='--menu'; BXTRA='Filter'; BCNCL='Back';
 	# WDTH=-1; HGHT=-1;
 	BHELP="${SORT[$(($s+1))]}";
@@ -1545,6 +1560,25 @@ while true; do
 	esac
 done
 unset s;
+}
+
+#»USER MENU
+#»Select User Dialog
+function _adbman_user(){
+eval "$CLEARDIAVARS";
+DTITLE="User List [User:$APPUSER]"
+DIABOX='--radiolist'; BCNCL='Back';
+MENU="$MANUSR"
+LABEL="\ZuChoose User\Zn:"
+_adbman_dialog;
+case $DIACODE in
+0)#${DIALOG_OK-0})
+	APPUSER=$DIAOUT
+	;;
+*)#Cancel
+	;;
+esac
+[ $PARALOG -gt 0 ] && _adbman_paralog 'UserMenu';
 }
 
 #»EXIT
@@ -1600,6 +1634,7 @@ while true; do
 		'T')#Tasks
 			;;
 		'U')#User
+			_adbman_user;
 			;;
 		*)#Unknown
 			echo "Unknown Choice in Main Menu:$DITAG" &&\
