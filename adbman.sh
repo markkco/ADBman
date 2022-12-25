@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/bin/bash
 
 #»STARTUP CHECK
 function _adbman_check(){
