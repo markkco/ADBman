@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set +H
 #»STARTUP CHECK
 function _adbman_check(){
 local CADB=""
@@ -431,46 +431,14 @@ function _adbman_userdata(){
 _tifu _adbman_userdata
 # echo "$(date +'[%T:%N]')>_adbman_userdata"
 
-#»DATA VARS
-function _adbman_datavars(){
-#»Packages dump; custom Package List
-PKGDUMP=''; PKGLIST='';
-#»User; App Name; Dump Package status; Dump Package Activities
-APPUSER=0; APPNAME=''; APPSTATS=''; APPACTTS='';
-#»App List Filtered (dialog list); App List Filtered Number; App List Total Number
-APPLFD=''; APPLFN=0; APPLTN=0;
-#»App Permissions (dialog list)
-APPPERMS='';
-#»App Info data associative array
-APP_apk=''; # Package Name
-APP_cpa=''; # Package Path
-APP_rpa=''; # Resources Path
-APP_dpa=''; # Data Path
-APP_enb=''; # Enabled Status
-APP_hid=''; # Hidden Status
-APP_ins=''; # Installed Status
-APP_sus=''; # Suspended Status
-APP_uid=''; # Package userID
-APP_gid=''; # Package groupIDs
-APP_ver=''; # Package Version
-APP_sys=''; # Package SYSTEM flag
-APP_prm=''; # Package Permissions list
-APP_prn=0;  # Package Permissions count
-APP_sta=0;  # Package apk Size
-APP_stc=0;  # Package cache Size
-APP_std=0;  # Package data Size
-APP_stt=0;  # Package total Size
-}
-_tifu _adbman_datavars
-# echo "$(date +'[%T:%N]')>_adbman_datavars"
-
 #»MENU LISTS
 function _adbman_menuvars(){
 #»Users Menu Options Dialog
 MANUSR="$(adb shell pm list users |\
 	sed -n 's/.*{\(.*\)}.*/\1/p' |\
-	sed 's/:/ [/2;s/$/]:off/' |\
-	sed '/Owner/s/:off/:on/')"
+	sed 's/:/ [/2;s/$/]:off/')"
+#»Parafunc: set APPUSER to 'on' in MENU
+MANUSRMENU='MENU=$(echo "$MANUSR" | sed "/^$APPUSER/s/:off/:on/")'
 #»Main Menu Options Dialog
 MANMOD=\
 'A:Applications [APPLTN]
@@ -486,7 +454,6 @@ U:User [APPUSER]'
 MANMODMENU='MENU=$(echo "$MANMOD" | sed "s/APPLTN/$APPLTN/;s/APPUSER/$APPUSER/")'
 #_App List Filtered Dialog; Total/Filtered Number
 APPLFD=''; APPLTN=0; APPLFN=0;
-
 #»App Menu Options Dialog
 APPMOD=\
 'A:Activities
@@ -496,7 +463,7 @@ D:Dump App
 E:EnableDisable
 F:SuspendUnsuspend
 H:HideUnhide [root]
-I:InstallUninstall
+I:Install/Uninstall
 P:Permissions [<prn>]
 S:Force Stop
 U:User [APPUSER]'
@@ -605,39 +572,76 @@ SETADBMANA='[ -n "$(sed -n "/^D:.*:on$/p" <<<"$APPFBD")" ] &&	ADBMANA="$ADBMANB/
 _tifu _adbman_menuvars
 # echo "$(date +'[%T:%N]')>_adbman_menuvars"
 
+#»DATA VARS
+function _adbman_datavars(){
+#»User
+APPUSER=0; APPUSER=$(echo "$MANUSR" | sed -n '/^0\|Owner/s/:.*:.*$//p')
+#»Packages dump; custom Package List
+PKGDUMP=''; PKGLIST='';
+#»App Name; Dump Package status; Dump Package Activities
+APPNAME=''; APPSTATS=''; APPACTTS='';
+#»App List Filtered (dialog list); App List Filtered Number; App List Total Number
+APPLFD=''; APPLFN=0; APPLTN=0;
+#»App Permissions (dialog list)
+APPPERMS='';
+#»App Info data associative array
+APP_apk=''; # Package Name
+APP_cpa=''; # Package Path
+APP_rpa=''; # Resources Path
+APP_dpa=''; # Data Path
+APP_enb=''; # Enabled Status
+APP_hid=''; # Hidden Status
+APP_ins=''; # Installed Status
+APP_sus=''; # Suspended Status
+APP_uid=''; # Package userID
+APP_gid=''; # Package groupIDs
+APP_ver=''; # Package Version
+APP_sys=''; # Package SYSTEM flag
+APP_prm=''; # Package Permissions list
+APP_prn=0;  # Package Permissions count
+APP_sta=0;  # Package apk Size
+APP_stc=0;  # Package cache Size
+APP_std=0;  # Package data Size
+APP_stt=0;  # Package total Size
+}
+_tifu _adbman_datavars
+# echo "$(date +'[%T:%N]')>_adbman_datavars"
+
 #»DUMP PACKAGES
 #»Create list of packages from: adb shell pm dump
 function _adbman_dumppackages(){
 # set -xv
 	PKGDUMP=$(adb shell pm dump 0 |\
-	sed -n '/^Packages:/,/^Queries:/p' |\
+	sed -n '/^Packages:/,/^\w/p' |\
 	sed '1d;$d;/^$/d;s/^\s\+/;/g' |\
-	sed '/^;Package\|^;userId=\|^;pkg=\|^;codePath=\|^;dataDir=\|^;pkgFlags=\|^;User\|^;gids=/!d' |\
+	sed "/^;User/{/User $APPUSER.*/!d}" |\
+	sed '/^;Package\|^;userId=\|^;pkg=\|^;codePath=\|^;dataDir=\|^;pkgFlags=\|^;User/!d' |\
 	sed 's/;Package\s\[\(\S\+\)\]/\1/g' |\
 	sed 's/Package{\(\S\+\)\s\S\+}/\1/g' |\
 	sed 's/User\s/User=/g' |\
-	sed 's/:\|{\|}//g; s/\[\s/[/g; s/\s\]/]/g' |\
+	sed 's/:\|{\|}//g;s/\[\s/[/g;s/\s\]/]/g' |\
 	sed '/\[.\+\]/s/,\s\|\s/,/g' |\
-	sed 's/true/1/g; s/false/0/g; s/\s/;/g; s/$/;/g' |\
-	sed -e :a -e '$!N; s/\n;//; ta' -e 'P;D' |\
+	sed 's/true/1/g;s/false/0/g;s/\s/;/g;s/$/;/g' |\
+	sed -e :a -e '$!N;s/\n;//;ta' -e 'P;D' |\
 	sort -t ';' -k1);
 # set +xv
+  # duplicate consecutive only
 	PKGDUPS=$(echo "$PKGDUMP" |\
-	sed -n '$!N; /^\(.*;(\).*\n\1.*$/p;D'); #duplicate consecutive only
-	PKGDUMP=$(echo "$PKGDUMP" |\
-	sed '$!N; /^\(.*;(\).*\n\1.*$/d;P;D'); #remove duplicate consecutive
-	PKGDUMP+=$'\n';
-	PKGDUMP+=$(echo "$PKGDUPS" |\
-	sed -n '$!N; /^\(.*;(\).*\n\1.*$/D;P;D'); #remove duplicates
-	PKGDUMP=$(sort -t ';' -k1 <<<"$PKGDUMP");
+	sed -n '$!N; /^\(.*;(\).*\n\1.*$/p;D'); 
+	if [ -n "$PKGDUPS" ]; then
+		#remove duplicate consecutive
+		PKGDUMP=$(echo "$PKGDUMP" |\
+		sed '$!N; /^\(.*;(\).*\n\1.*$/d;P;D');
+		PKGDUMP+=$'\n';
+	  #remove duplicates
+		PKGDUMP+=$(echo "$PKGDUPS" |\
+		sed -n '$!N; /^\(.*;(\).*\n\1.*$/D;P;D');
+		PKGDUMP=$(sort -t ';' -k1 <<<"$PKGDUMP");
+	fi
 	# Total App Count
 	APPLTN=$(sed '$=;d' <<<"$PKGDUMP");
 }
 _tifu _adbman_dumppackages
-# exit
-# echo "$(date +'[%T:%N]')>_adbman_dumppackages"
-[ $PARALOG -gt 0 ] && _adbman_paralog 'Dump Packages' "PKGDUMP";
-# echo "$(date +'[%T:%N]')>_adbman_paralog"
 
 #»APP FILTER READ
 #»Reads filters from config file
@@ -1419,10 +1423,10 @@ function _adbman_appinfo_menu(){
 APPLX=0; APPIX=1;
 while true; do
 eval "$CLEARDIAVARS";
+# Refresh APPINFO only if APPIX changed and reset APPIX
 if [ $APPIX -eq 1 ]; then
 	_tifu _adbman_appinfo; APPIX=0; fi;
 DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BCNCL='Back'
-# Refresh APPINFO only if APPIX changed and reset APPIX
 eval "$APPMODLABEL"; # LABEL for App Menu
 eval "$APPMODMENU"; # MENU from APPMOD
 eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
@@ -1501,12 +1505,13 @@ case $DIACODE in
 esac
 # [ $PARALOG -gt 0 ] && _adbman_paralog 'AppinfoMenu-Returned';
 done
-# If APPLX changed then refresh PKGLIST, set APPX=0
+# If APPLX changed then refresh PKGLIST, set APPLX=0
 if [ $APPLX -eq 1 ]; then
 	APPLX=0
 	_tifu _adbman_dumppackages
 	_tifu _adbman_appfilter
 fi
+eval "$CLEARDIASTATE";
 }
 
 #»APP LIST MENU
@@ -1565,20 +1570,30 @@ unset s;
 #»USER MENU
 #»Select User Dialog
 function _adbman_user(){
-eval "$CLEARDIAVARS";
-DTITLE="User List [User:$APPUSER]"
-DIABOX='--radiolist'; BCNCL='Back';
-MENU="$MANUSR"
-LABEL="\ZuChoose User\Zn:"
-_adbman_dialog;
-case $DIACODE in
-0)#${DIALOG_OK-0})
-	APPUSER=$DIAOUT
-	;;
-*)#Cancel
-	;;
-esac
-[ $PARALOG -gt 0 ] && _adbman_paralog 'UserMenu';
+	APPLX=0;
+	eval "$CLEARDIAVARS";
+	DTITLE="User List [User:$APPUSER]"
+	DIABOX='--radiolist'; BCNCL='Back'; APPLX=0;
+	eval "$MANUSRMENU" # Create MENU from MANUSR
+	LABEL="\ZuChoose User\Zn:"
+	_adbman_dialog;
+	case $DIACODE in
+	0)#${DIALOG_OK-0})
+		if [ "$APPUSER" != "$DIAOUT" ]; then
+			APPLX=1;
+			APPUSER=$DIAOUT;
+		fi
+		;;
+	*)#Cancel
+		;;
+	esac
+	# If APPLX changed then refresh PKGLIST, set APPLX=0
+	if [ $APPLX -eq 1 ]; then
+		_tifu _adbman_dumppackages
+		_tifu _adbman_appfilter
+		[ $PARALOG -gt 0 ] && _adbman_paralog 'User Menu - Dump Packages' 'APPLX' 'PKGDUMP';
+		APPLX=0
+	fi;
 }
 
 #»EXIT
