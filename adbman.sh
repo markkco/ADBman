@@ -610,9 +610,8 @@ _tifu _adbman_datavars
 #»DUMP PACKAGES
 #»Create list of packages from: adb shell pm dump
 function _adbman_dumppackages(){
-# set -xv
 	PKGDUMP=$(adb shell pm dump 0 |\
-	sed -n '/^Packages:/,/^\w/p' |\
+	sed -n '/^Packages/,/^Queries/p' |\
 	sed '1d;$d;/^$/d;s/^\s\+/;/g' |\
 	sed "/^;User/{/User $APPUSER.*/!d}" |\
 	sed '/^;Package\|^;userId=\|^;pkg=\|^;codePath=\|^;dataDir=\|^;pkgFlags=\|^;User/!d' |\
@@ -624,7 +623,6 @@ function _adbman_dumppackages(){
 	sed 's/true/1/g;s/false/0/g;s/\s/;/g;s/$/;/g' |\
 	sed -e :a -e '$!N;s/\n;//;ta' -e 'P;D' |\
 	sort -t ';' -k1);
-# set +xv
   # duplicate consecutive only
 	PKGDUPS=$(echo "$PKGDUMP" |\
 	sed -n '$!N; /^\(.*;(\).*\n\1.*$/p;D'); 
@@ -885,7 +883,6 @@ eval "$CLEARDIAVARS";
 #»Get App info from: adb shell dumpsys diskstats
 #»Called from _adbman_appinfo
 function _adbman_appinfo_size(){
-	set +xv
 	local DS="$(adb shell dumpsys diskstats)";
 	local -a DSN DSA DSD DSC;
 	local -i DSI=0;
