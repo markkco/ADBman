@@ -1439,7 +1439,7 @@ case $DIACODE in
 		_adbman_appback_menu;;
 	"C")#Clear App Data
 		DTITLE='Clear App Data'; DIABOX='--yesno';
-		ADBOPT='clear';
+		ADBOPT="clear --user $APPUSER";
 		_adbman_appmod;;
 	"D")#Dump:display App
 		_adbman_appinfo_show;;
@@ -1447,44 +1447,45 @@ case $DIACODE in
 		if [ ${APP_enb} -le 1 ]; then
 			DTITLE='Disable App'; DIABOX='--menu';
 			ADBOPT=\
-'1:Disable (disable) [root]
-2:Disable (disable-user)'
+"1:Disable (disable --user $APPUSER) [root]
+2:Disable (disable-user --user $APPUSER)
+3:Disable (disable-until-used --user $APPUSER)"
 		else
 			DTITLE='Enable App'; DIABOX='--menu';
 			ADBOPT=\
-'1:Enable (default-state)
-2:Enable (enable)'
+"1:Enable (default-state --user $APPUSER)
+2:Enable (enable --user $APPUSER)"
 		fi;
 		_adbman_appmod;;
 	"F")#Suspend/Unsuspend package
 		if [ "${APP_sus}" == "true" ]; then
 			DTITLE='Unsuspend App'; DIABOX='--yesno';
-			ADBOPT='unsuspend'
+			ADBOPT="unsuspend --user $APPUSER"
 		else
 			DTITLE='Suspend App'; DIABOX='--yesno';
-			ADBOPT='suspend'
+			ADBOPT="suspend --user $APPUSER"
 		fi;
 		_adbman_appmod;;
 	"H")#Hide/Unhide package
 		if [ "${APP_hid}" == "true" ]; then
 			DTITLE='Unhide App [root]'; DIABOX='--yesno';
-			ADBOPT='unhide'
+			ADBOPT="unhide --user $APPUSER"
 		else
 			DTITLE='Hide App [root]'; DIABOX='--yesno';
-			ADBOPT='hide'
+			ADBOPT="hide --user $APPUSER"
 		fi;
 		_adbman_appmod;;
 	"I")#Install/Uninstall package
 		if [ "${APP_ins}" == "true" ]; then
 			DTITLE='Uninstall App'; DIABOX='--menu'
 			ADBOPT=\
-'1:Uninstall-user and keep data (uninstall -k --user 0)
-2:Uninstall-user and remove data (uninstall --user 0)
+"1:Uninstall and keep data (uninstall -k --user $APPUSER)
+2:Uninstall and remove data (uninstall --user $APPUSER)
 3:Uninstall and keep data (uninstall -k)
-4:Uninstall and remove data (uninstall)'
+4:Uninstall and remove data (uninstall)"
 		else
 			DTITLE='Install App'; DIABOX='--yesno'
-			ADBOPT='install-existing'
+			ADBOPT="install-existing --user $APPUSER"
 		fi;
 		_adbman_appmod;;
 	"P")#App Permissions
