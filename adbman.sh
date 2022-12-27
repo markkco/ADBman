@@ -470,9 +470,10 @@ U:User [APPUSER]'
 #»Parafunc: Modify App Menu Options Dialog per App status
 APPMODMENU=\
 'MENU="$APPMOD";
+MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
 [ "${APP_ins}" == "true" ] &&\
-	MENU=$(sed "s/Install//" <<<"$MENU") ||\
-	MENU=$(sed "s/Unstall//" <<<"$MENU");
+	MENU=$(sed "s+Install/++" <<<"$MENU") ||\
+	MENU=$(sed "s+/Uninstall++" <<<"$MENU");
 [ "${APP_enb}" -le 1 ] &&\
 	MENU=$(sed "s/Enable//" <<<"$MENU") ||\
 	MENU=$(sed "s/Disable//" <<<"$MENU");
@@ -1043,10 +1044,13 @@ function _adbman_appinfo(){
 	APPSTATS="$(echo "$APPSTATS" |\
 		sed '1,/^Packages/d' |\
 		sed '/^$/d;/^Hidden/q;' |\
+		sed -e :a -e '$!N;s/\n\s*gids=/ gids=/;ta' -e 'P;D' |\
 		sed '/^$/d;$d')"
 	# Extract App Status
 	APP_apk=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*Package\s\[\(.*\)\].*/\1/p')
+	APP_uid=$(echo "$APPSTATS" |\
+		sed -n 's/^\s*userId=\([0-9]*\)/\1/p')
 	APP_cpa=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*codePath=\(\S*\)/\1/p')
 	APP_rpa=$(echo "$APPSTATS" |\
@@ -1054,15 +1058,13 @@ function _adbman_appinfo(){
 	APP_dpa=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*dataDir=\(\S*\)/\1/p')
 	APP_enb=$(echo "$APPSTATS" |\
-		sed -n '/^\s*User/s/.*enabled=\(\S*\)\s.*/\1/p')
+		sed -n "/^\s*User $APPUSER/s/.*enabled=\(\S*\)\s.*/\1/p")
 	APP_hid=$(echo "$APPSTATS" |\
-		sed -n '/^\s*User/s/.*hidden=\(\S*\)\s.*/\1/p')
+		sed -n "/^\s*User $APPUSER/s/.*hidden=\(\S*\)\s.*/\1/p")
 	APP_ins=$(echo "$APPSTATS" |\
-		sed -n '/^\s*User/s/.*installed=\(\S*\)\s.*/\1/p')
+		sed -n "/^\s*User $APPUSER/s/.*installed=\(\S*\)\s.*/\1/p")
 	APP_sus=$(echo "$APPSTATS" |\
-		sed -n '/^\s*User/s/.*suspended=\(\S*\)\s.*/\1/p')
-	APP_uid=$(echo "$APPSTATS" |\
-		sed -n 's/^\s*userId=\([0-9]*\)/\1/p')
+		sed -n "/^\s*User $APPUSER/s/.*suspended=\(\S*\)\s.*/\1/p")
 	APP_gid=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*gids=\s*\[\(.*\)\]/\1/p')
 	APP_ver=$(echo "$APPSTATS" |\
@@ -1071,7 +1073,7 @@ function _adbman_appinfo(){
 		sed -n 's/^\s*pkgFlags.*\(SYSTEM\).*$/\1/p')
 	_tifu _adbman_appinfo_perms;
 	_tifu _adbman_appinfo_size;
-	# [ $PARALOG -gt 0 ] && _adbman_paralog '_appinfo' 'APPSTATS' 'APPACTTS'
+	[ $PARALOG -gt 0 ] && _adbman_paralog '_appinfo' 'APPSTATS' 'APPACTTS'
 }
 
 #»SIZE FORMAT
@@ -1493,6 +1495,9 @@ case $DIACODE in
 		if [ -n "$APPPERMS" ]; then
 			_adbman_appperms_menu;
 		fi;;
+	"U")#App User Select
+			_adbman_user;
+		;;
 	esac
 	;;
 3)#${DIALOG_EXTRA-3})
@@ -1577,7 +1582,7 @@ function _adbman_user(){
 	case $DIACODE in
 	0)#${DIALOG_OK-0})
 		if [ "$APPUSER" != "$DIAOUT" ]; then
-			APPLX=1;
+			APPLX=1; APPIX=1;
 			APPUSER=$DIAOUT;
 		fi
 		;;
