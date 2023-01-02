@@ -74,6 +74,8 @@ function _adbman_dialogvars(){
 #»dialog "${DIAOPT[@]}" "$DIABOX" "$LABEL" "$HGHT" "$WDTH"
 DTITLE='';      # --title "$DTITLE"
 BTITLE='';      # --backtitle "$BTITLE"
+BLYES='';       # --yes-label "$BLYES"
+BLNOO='';       # --no-label "$BLNOO"
 BOKAY='';       # --ok-label "$BOKAY"
 BCNCL='';       # --cancel-label "$BCNCL"
 BXTRA='';       # --extra-button --extra-label "$BXTRA"
@@ -158,7 +160,7 @@ CLEARDIASTATE=\
 'DIASTATE=$(echo "$DIASTATE" | sed -n "/${DTITLE%% [*}/d");'
 CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
-DBTTN=""; BOKAY=""; BCNCL=""; BXTRA=""; BHELP="";
+DBTTN=""; BLYES=""; BLNOO=""; BOKAY=""; BCNCL=""; BXTRA=""; BHELP="";
 LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
 CLEARDIABTTN='DBTTN=""; BOKAY=""; BCNCL=""; BXTRA=""; BHELP=""'
 }
@@ -217,6 +219,8 @@ local -i DXC=0 PDW=0 PDH=0;
 [ -n "$DTITLE" ] && LBLV+=" |DTITLE=$DTITLE|";
 [ -n "$BTITLE" ] && LBLV+="\n|BTITLE=$BTITLE|";
 [ -n "$BOKAY$BCNCL$BXTRA$BHELP" ] && LBL+="\n";
+[ -n "$BLYES" ] && LBLV+="|BLYES=$BLYES| ";
+[ -n "$BLNOO" ] && LBLV+="|BLNOO=$BLNOO| ";
 [ -n "$BOKAY" ] && LBLV+="|BOKAY=$BOKAY| ";
 [ -n "$BCNCL" ] && LBLV+="|BCNCL=$BCNCL| ";
 [ -n "$BXTRA" ] && LBLV+="|BXTRA=$BXTRA| ";
@@ -343,35 +347,37 @@ function _adbman_dialog(){
 	if [ -n "$DIABOX" ]; then
 		DIALOG=(dialog);
 		DIALOG+=("${DIAOPT[@]}");
-		# --menu|--checklist|--inputmenu
 		# Only nonempty option params included
+		[ -n "$BLYES" ] &&\
+			DIALOG+=('--yes-label' "$BLYES");
+		[ -n "$BLNOO" ] &&\
+			DIALOG+=('--no-label' "$BLNOO");
+		[ -n "$BOKAY" ] &&\
+			DIALOG+=('--ok-label' "$BOKAY");
+		[ -n "$BCNCL" ] &&\
+			DIALOG+=('--cancel-label' "$BCNCL");
+		[ -n "$BXTRA" ] &&\
+			DIALOG+=('--extra-button' '--extra-label' "$BXTRA");
+		[ -n "$BHELP" ] &&\
+			DIALOG+=('--help-button' '--help-label' "$BHELP");
+		[ -n "$DBTTN" ] &&\
+			DIALOG+=('--default-button' "$DBTTN");
+		[ -n "$DITAG" ] &&\
+			DIALOG+=('--default-item' "$DITAG");
+		[ -n "$BTITLE" ] &&\
+			DIALOG+=('--backtitle' "$BTITLE");
+		[ -n "$DTITLE" ] &&\
+			DIALOG+=('--title' "$DTITLE");
+		# --menu|--checklist|--inputmenu
 		if [ "$DIABOX" == "--menu" ] ||\
 			[ "$DIABOX" == "--checklist" ] ||\
 			[ "$DIABOX" == "--radiolist" ] ||\
 			[ "$DIABOX" == "--inputmenu" ]; then
-			[ -n "$BOKAY" ] &&\
-				DIALOG+=('--ok-label' "$BOKAY");
-			[ -n "$BCNCL" ] &&\
-				DIALOG+=('--cancel-label' "$BCNCL");
-			[ -n "$BXTRA" ] &&\
-				DIALOG+=('--extra-button' '--extra-label' "$BXTRA");
-			[ -n "$BHELP" ] &&\
-				DIALOG+=('--help-button' '--help-label' "$BHELP");
-			[ -n "$DBTTN" ] &&\
-				DIALOG+=('--default-button' "$DBTTN");
-			[ -n "$DITAG" ] &&\
-				DIALOG+=('--default-item' "$DITAG");
-			[ -n "$BTITLE" ] &&\
-				DIALOG+=('--backtitle' "$BTITLE");
-			[ -n "$DTITLE" ] &&\
-				DIALOG+=('--title' "$DTITLE");
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH $SIZE);
 			readarray -t DIALIST <<<"${MENU//':'/$'\n'}";
 			DIALOG+=("${DIALIST[@]}");
 		else
 			# --msgbox|--yesno|--textbox|-dselect
-			[ -n "$BTITLE" ] && DIALOG+=('--backtitle' "$BTITLE");
-			[ -n "$DTITLE" ] && DIALOG+=('--title' "$DTITLE");
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH);
 		fi;
 		# Execute dialog
@@ -986,51 +992,62 @@ function _adbman_appinfo_perms(){
 	unset PDC PRQ PIN PRT;
 }
 
-#»APP INFO SHOW
-#»Display App dump info
-function _adbman_appinfo_show(){
-	local DTITLE=""
-	local WDTH=-1
-	local HGHT=-1
-	local APPNAME="$1"
-	local MESSAGE
-	local -a DIALOG
+#»APP DUMP VIEW
+#»App dump export and viewer
+function _adbman_appinfo_dumpview(){
+	eval "$CLEARDIAVARS";
 	if [ "${APP_sys}" == "SYSTEM" ];
-	then DTITLE="Package Dump:${APPCHS}$APPNAME";
-	else DTITLE="Package Dump:${APPCHT}$APPNAME";
+		then DTITLE="Package Dump:${APPCHS}$APPNAME";
+		else DTITLE="Package Dump:${APPCHT}$APPNAME";
 	fi
-	if [ ! -f "$ADBMANP/$APPNAME" ]; then
-	_adbman_exec "$APPNAME" 'Dump App' '--yesno' 'dump'
+	if [ -f "$ADBMANP/$APPNAME" ]; then
+		DIABOX='--yesno'; BLYES='View'; BLNOO='reDump'
+		LABEL="Dump already exist:\n$ADBMANP/$APPNAME"
+		[ $PARALOG -gt 0 ] && _adbman_paralog 'App Dump - View existing';
+		_adbman_dialog
+		if [ $DIACODE -ne 0 ]; then
+			ADBOPT="rm $ADBMANP/$APPNAME"
+			ADBOUT="$($ADBOPT 2>&1)";
+			DIACODE=$?;
+			_adbman_log "[\$]$ADBOPT"
+			_adbman_log "[$DIACODE]$ADBOUT"
+		fi
 	fi
+	BLYES=''; BLNOO='';
 	while true; do
-	DIALOG=(dialog "$DIAOPT" \
-		"$DTITLE" \
-		--textbox "$ADBMANP/$APPNAME" $HGHT $WDTH)
-	MESSAGE=$("${DIALOG[@]}" --output-fd 1)
-	DIACODE=$?
-	[ $DIACODE -eq 0 ] && break;
-	done
-	local TB=(`_adbman_tb "$ADBMANP/$APPNAME"`)
-	((WDTH=${TB[0]}+10))
-	HGHT=10
-	# echo "W:${TB[0]}|H:${TB[1]}-WDTH:$WDTH|HGHT:$HGHT"
-	DIALOG=(dialog "$DIAOPT" \
-	"$DTITLE" \
-	--defaultno \
-	--yesno "Remove file:\n$ADBMANP/$APPNAME" $HGHT $WDTH)
-	MESSAGE=$("${DIALOG[@]}" --output-fd 1)
-	DIACODE=$?
-	if [ $DIACODE -eq 0 ]; then
-	rm "$ADBMANP/$APPNAME"
-	DIACODE=$?
-	if [ $DIACODE -eq 0 ]; then
-		DIALOG=(dialog "$DIAOPT" \
-	"$DTITLE" \
-	--msgbox "File removed:\n$ADBMANP/$APPNAME" $HGHT $WDTH)
-		MESSAGE=$("${DIALOG[@]}" --output-fd 1)
+	if [ ! -f "$ADBMANP/$APPNAME" ]; then
+		ADBOPT="adb shell pm dump $APPNAME >$ADBMANP/$APPNAME"
+		eval "$ADBOPT"
+		DIACODE=$?;
+		_adbman_log "[\$]$ADBOPT"
+		_adbman_log "[$DIACODE]$ADBOUT"
 		DIACODE=$?
+		if [ $DIACODE -ne 0 ]; then
+			DIABOX='--msgbox'; LABEL='Dump error!'
+			_adbman_dialog
+		fi
+	else
+		DIABOX='--textbox';
+		LABEL="$ADBMANP/$APPNAME";
+		_adbman_dialog;
+		DIABOX='--yesno'; DBTTN='cancel';
+		LABEL="Remove file:\n$ADBMANP/$APPNAME"
+		_adbman_dialog
+		if [ $DIACODE -eq 0 ]; then
+			ADBOPT="rm $ADBMANP/$APPNAME"
+			ADBOUT="$($ADBOPT 2>&1)";
+			DIACODE=$?;
+			_adbman_log "[\$]$ADBOPT"
+			_adbman_log "[$DIACODE]$ADBOUT"
+			if [ $DIACODE -eq 0 ]; then
+				DIABOX='--msgbox'
+				LABEL="File removed:\n$ADBMANP/$APPNAME"
+				_adbman_dialog
+			fi
+		fi
+		break;
 	fi
-	fi
+	done
 }
 
 #»APP INFO
@@ -1105,8 +1122,10 @@ function _adbman_log(){
 }
 
 #»ADB EXEC
-#»Execute adb
-# call: LABEL="$(_adbman_exec)"
+#»Execute (multiline) command list stored in $ADBOPT string var
+# Logs history to $ADBMANP/$ADBMANL
+# Echoes list of command stdouts, call: LABEL="$(_adbman_exec)"
+# Returns error code stored in $DIACODE
 function _adbman_exec(){
 	eval "$CLEARDIAVARS";
 	local ADBCOM ADBOUT LOG OUT='';
@@ -1446,8 +1465,8 @@ case $DIACODE in
 		DTITLE='Clear App Data'; DIABOX='--yesno';
 		ADBOPT="clear --user $APPUSER";
 		_adbman_appmod;;
-	"D")#Dump:display App
-		_adbman_appinfo_show;;
+	"D")#Dump:App dump view
+		_adbman_appinfo_dumpview;;
 	"E")#Enable/Disable package
 		if [ ${APP_enb} -le 1 ]; then
 			DTITLE='Disable App'; DIABOX='--menu';
