@@ -493,7 +493,7 @@ LABEL="$LABEL\nVersion: ${APP_ver}";
 LABEL="$LABEL, UserID: ${APP_uid}";
 [ -n "${APP_gid}" ] &&\
 	LABEL="$LABEL, GroupIDs: ${APP_gid}";
-LABEL="$LABEL\nStatus:";
+LABEL="$LABEL\nStatus: ";
 [ "${APP_sys}" == "SYSTEM" ] &&\
 	LABEL="$LABEL ${APPCHS}System" ||\
 	LABEL="$LABEL ${APPCHT}ThirdParty";
@@ -506,6 +506,8 @@ else LABEL="$LABEL, ${APPCHU}Uninstalled"; fi;
 	LABEL="$LABEL, ${APPCHF}Suspended";
 [ "${APP_hid}" == "true" ] &&\
 	LABEL="$LABEL, ${APPCHH}Hidden";
+[ -n "${APP_fla}" ] &&\
+	LABEL="$LABEL\nFlags:   ${APP_fla}";
 LABEL="$LABEL\nStorage:";
 LABEL="$LABEL App($(_adbman_sizeformat ${APP_sta})),";
 LABEL="$LABEL Data($(_adbman_sizeformat ${APP_std})),";
@@ -1057,6 +1059,9 @@ function _adbman_appinfo(){
 		sed -n 's/^\s*resourcePath=\(\S*\)/\1/p')
 	APP_dpa=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*dataDir=\(\S*\)/\1/p')
+	APP_fla=$(echo "$APPSTATS" |\
+		sed -n 's/^\s*flags=\[\s\(.*\)\s\]/\1/p' | sed 's/\s/,/g')
+	#';s/[\s*\|\s*]//p')
 	APP_enb=$(echo "$APPSTATS" |\
 		sed -n "/^\s*User $APPUSER/s/.*enabled=\(\S*\)\s.*/\1/p")
 	APP_hid=$(echo "$APPSTATS" |\
