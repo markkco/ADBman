@@ -2,25 +2,25 @@
 set +H
 #»STARTUP CHECK
 function _adbman_check(){
-local CADB=""
-local -i EADB=0
-CADB="$(adb version 2>/dev/null)"
-EADB=$?
-[ $EADB -ne 0 ] &&\
-echo "'adb' not found! Ensure 'adb' is in PATH!" &&\
-exit $EADB
-CADB="$(adb shell whoami 2>/dev/null)"
-EADB=$?
-[ $EADB -ne 0 ] &&\
-echo "adb not connected! Check: 'adb devices'!" &&\
-exit $EADB
-#»DEBUG/PARALOG
-CHECKER=0
-DEBUG=0
-PARALOG=0
-[ "$1" == "debug" ] && DEBUG=1
-[ "$1" == "paralog" ] && PARALOG=1
-TIFU='';
+	local CADB=""
+	local -i EADB=0
+	CADB="$(adb version 2>/dev/null)"
+	EADB=$?
+	[ $EADB -ne 0 ] &&\
+		echo "'adb' not found! Ensure 'adb' is in PATH!" &&\
+	exit $EADB
+	CADB="$(adb shell whoami 2>/dev/null)"
+	EADB=$?
+	[ $EADB -ne 0 ] &&\
+		echo "adb not connected! Check: 'adb devices'!" &&\
+	exit $EADB
+	#»DEBUG/PARALOG
+	CHECKER=0
+	DEBUG=0
+	PARALOG=0
+	[ "$1" == "debug" ] && DEBUG=1
+	[ "$1" == "paralog" ] && PARALOG=1
+	TIFU='';
 }
 _adbman_check $@
 # echo "$(date +'[%T:%N]')>_adbman_check"
@@ -99,6 +99,7 @@ DINPUT='';      # Dialog InputMenu output: RENAMED $DITAG $DINPUT
 DIASTATE='';    # Saved Dialog options list
 #»»»»»»»»»»»
 DIAOPT=("--no-shadow" "--colors");
+# debug:  "--trace $ADBMANP/adbman.trc"
 
 #»DIALOG PARAMETER FUNCTIONS: eval "$PARAMETER"
 #»Check DINPUT for invalid characters, DINPUTOK=0:empty|1:ok|2:bad
@@ -439,14 +440,18 @@ _tifu _adbman_userdata
 
 #»MENU LISTS
 function _adbman_menuvars(){
-#»Users Menu Options Dialog
+#»Options Menu List Dialog
+MANOPT=\
+'1:Config Directory
+2:Paralog'
+#»Users Menu List Dialog
 MANUSR="$(adb shell pm list users |\
 	sed -n 's/.*{\(.*\)}.*/\1/p' |\
 	sed 's/:/ [/2;s/$/]:off/')"
 #»Parafunc: set APPUSER to 'on' in MENU
 MANUSRMENU='MENU=$(echo "$MANUSR" | sed "/^$APPUSER/s/:off/:on/")'
-#»Main Menu Options Dialog
-MANMOD=\
+#»Main Menu List Dialog
+MANMLD=\
 'A:Applications [APPLTN]
 B:Backup and Restore
 H:History Log
@@ -456,12 +461,12 @@ P:Permissions
 S:Settings
 T:Tasks
 U:User [APPUSER]'
-#»Parafunc: set App Count and active user in MANMOD
-MANMODMENU='MENU=$(echo "$MANMOD" | sed "s/APPLTN/$APPLTN/;s/APPUSER/$APPUSER/")'
+#»Parafunc: set App Count and active user in MANMLD
+MANMLDMENU='MENU=$(echo "$MANMLD" | sed "s/APPLTN/$APPLTN/;s/APPUSER/$APPUSER/")'
 #_App List Filtered Dialog; Total/Filtered Number
 APPLFD=''; APPLTN=0; APPLFN=0;
-#»App Menu Options Dialog
-APPMOD=\
+#»App Menu List Dialog
+APPMLD=\
 'A:Activities
 B:Backup/Restore
 C:Clear Data
@@ -473,9 +478,9 @@ I:Install/Uninstall
 P:Permissions [<prn>]
 S:Force Stop
 U:User [APPUSER]'
-#»Parafunc: Modify App Menu Options Dialog per App status
-APPMODMENU=\
-'MENU="$APPMOD";
+#»Parafunc: Modify App Menu List Dialog per App status
+APPMLDMENU=\
+'MENU="$APPMLD";
 MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
 [ "${APP_ins}" == "true" ] &&\
 	MENU=$(sed "s+Install/++" <<<"$MENU") ||\
@@ -493,7 +498,7 @@ MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
 	MENU=$(sed "s/<prn>/${APP_prn}/" <<<"$MENU") ||\
 	MENU=$(sed "/^P/d" <<<"$MENU");'
 #»Parafunc: Set LABEL for App Menu from APPINFO
-APPMODLABEL=\
+APPMLDLABEL=\
 'LABEL="Package: $APPNAME";
 LABEL="$LABEL\nVersion: ${APP_ver}";
 LABEL="$LABEL, UserID: ${APP_uid}";
@@ -1419,7 +1424,7 @@ function _adbman_appmod(){
 if [ -n "$ADBOPT" ]; then
 	MENU=''; DITAG=''; BCNCL='';
 	eval "$SETLABELAPP";
-	[ "$DIABOX" == '--menu' ] &&	MENU="$ADBOPT";
+	[ "$DIABOX" == '--menu' ] && MENU="$ADBOPT";
 	eval "$LOADDIASTATE";
 	_adbman_dialog;
 	eval "$SAVEDIASTATE";
@@ -1450,8 +1455,8 @@ eval "$CLEARDIAVARS";
 if [ $APPIX -eq 1 ]; then
 	_tifu _adbman_appinfo; APPIX=0; fi;
 DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BCNCL='Back'
-eval "$APPMODLABEL"; # LABEL for App Menu
-eval "$APPMODMENU"; # MENU from APPMOD
+eval "$APPMLDLABEL"; # LABEL for App Menu
+eval "$APPMLDMENU"; # MENU from APPMLD
 eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
 [ $PARALOG -gt 0 ] && _adbman_paralog 'AppinfoMenu-Executed';
 case $DIACODE in
@@ -1594,6 +1599,19 @@ done
 unset s;
 }
 
+#»OPTIONS MENU
+#»ADBman oprions
+function _adbman_options(){
+	eval "$CLEARDIAVARS";
+	while true; do
+		DTITLE='ADBman Options'; DIABOX='--menu';
+		MENU="$MANOPT"
+		_adbman_dialog
+		LABEL="$DIACODE"
+		[ $DIACODE -eq 255 ] && break;
+	done
+}
+
 #»USER MENU
 #»Select User Dialog
 function _adbman_user(){
@@ -1644,7 +1662,7 @@ while true; do
 	DTITLE="ADBman Menu"; DIABOX='--menu';
 	LABEL="Select Option:"
 	DBTTN='ok' BCNCL='Exit';
-	eval "$MANMODMENU"; # Create MENU from MANMOD
+	eval "$MANMLDMENU"; # Create MENU from MANMLD
 	eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE"
 	[ $PARALOG -gt 0 ] && _adbman_paralog 'MainMenu-Executed';
 	case $DIACODE in
@@ -1668,6 +1686,7 @@ while true; do
 		'L')#Log
 			;;
 		'O')#Options
+			_adbman_options;
 			;;
 		'P')#Permissions
 			;;
