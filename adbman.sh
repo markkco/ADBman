@@ -242,29 +242,29 @@ local LBLV='' LBLT='' g='' l='';
 local -i DXC=0 PDW=0 PDH=0;
 #Create vars Label
 [ -n "$DIABOX" ] && LBLV="|DIABOX=$DIABOX|";
-[ -n "$DTITLE" ] && LBLV+=" |DTITLE=$DTITLE|";
+[ -n "$DTITLE" ] && LBLV+="|DTITLE=$DTITLE|";
 [ -n "$BTITLE" ] && LBLV+="\n|BTITLE=$BTITLE|";
-[ -n "$BOKAY$BCNCL$BXTRA$BHELP" ] && LBL+="\n";
-[ -n "$BLYES" ] && LBLV+="|BLYES=$BLYES| ";
-[ -n "$BLNOO" ] && LBLV+="|BLNOO=$BLNOO| ";
-[ -n "$BOKAY" ] && LBLV+="|BOKAY=$BOKAY| ";
-[ -n "$BCNCL" ] && LBLV+="|BCNCL=$BCNCL| ";
-[ -n "$BXTRA" ] && LBLV+="|BXTRA=$BXTRA| ";
-[ -n "$BHELP" ] && LBLV+="|BHELP=$BHELP| ";
+[ -n "$BLYES$BLNOO$BOKAY$BCNCL$BXTRA$BHELP" ] && LBL+="\n";
+[ -n "$BLYES" ] && LBLV+="|BLYES=$BLYES|";
+[ -n "$BLNOO" ] && LBLV+="|BLNOO=$BLNOO|";
+[ -n "$BOKAY" ] && LBLV+="|BOKAY=$BOKAY|";
+[ -n "$BCNCL" ] && LBLV+="|BCNCL=$BCNCL|";
+[ -n "$BXTRA" ] && LBLV+="|BXTRA=$BXTRA|";
+[ -n "$BHELP" ] && LBLV+="|BHELP=$BHELP|";
 [ "$WDTH" -ge -1 ] && LBLV+="\n|WDTH=$WDTH|";
-[ "$HGHT" -ge -1 ] && LBLV+=" |HGHT=$HGHT|";
-[ "$SIZE" -ge -1 ] && LBLV+=" |SIZE=$SIZE|";
+[ "$HGHT" -ge -1 ] && LBLV+="|HGHT=$HGHT|";
+[ "$SIZE" -ge -1 ] && LBLV+="|SIZE=$SIZE|";
 [ "$DIACODE" -ge -1 ] && LBLV+="\n|DIACODE=$DIACODE|";
-[ -n "$DBTTN" ] && LBLV+=":|DBTTN=$DBTTN|";
+[ -n "$DBTTN" ] && LBLV+="|DBTTN=$DBTTN|";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
-[ -n "$DITAG" ] && LBLV+=" |DITAG=$DITAG|";
-[ -n "$DINPUT" ] && LBLV+=":|DINPUT=$DINPUT|";
+[ -n "$DITAG" ] && LBLV+="|DITAG=$DITAG|";
+[ -n "$DINPUT" ] && LBLV+="|DINPUT=$DINPUT|";
 [ -n "$APPUSER" ] && LBLV+="\n|APPUSER=$APPUSER|";
-[ -n "$APPNAME" ] && LBLV+=" |APPNAME=$APPNAME|";
+[ -n "$APPNAME" ] && LBLV+="|APPNAME=$APPNAME||APPIX=$APPIX||APPLX=$APPLX|";
 [ -n "$DIASTATE" ] &&\
 	LBLV+="\n\Zu|DIASTATE|\Zn\n${DIASTATE//$'\n'/'\n'}\n——————————";
 [ -n "$ADBOPT" ] &&\
-	LBLV+="\n|ADBOPT=${ADBOPT//$'\n'/'\n'}|";
+	LBLV+="\n\Zu|ADBOPT|\Zn\n$ADBOPT\n————————";
 [ -n "$ADBCOM" ] &&\
 	LBLV+="\n\Zu|ADBCOM|\Zn\n$ADBCOM\n————————";
 [ -n "$ADBOUT" ] &&\
@@ -272,8 +272,8 @@ local -i DXC=0 PDW=0 PDH=0;
 [ -n "$LOG" ] && LBLV+="\n\Zu|LOG|\Zn\n$LOG\n—————";
 [ -n "$OUT" ] && LBLV+="\n\Zu|OUT|\Zn\n$OUT\n—————";
 [ -n "$LABEL" ] && LBLV+="\n\Zu|LABEL|\Zn\n$LABEL\n———————";
-[ -n "$MENU" ] && MNU=$(sed -n '1,50p' <<<"$MENU") &&\
-	LBLV+="\n\Zu|MENU|\Zn\n${MNU//$'\n'/'\n'}\n——————\n(head 50)";
+[ -n "$MENU" ] && MNU=$(sed -n '1,100p' <<<"$MENU") &&\
+	LBLV+="\n\Zu|MENU|\Zn\n${MNU//$'\n'/'\n'}\n——————\n(head 100)";
 if [ -n "$APP_apk" ]; then
 	LBLV+="\n\Zu|APPSTATUS|\Zn" &&\
 		LBLV+="\n|APP_apk=${APP_apk}|";
@@ -295,14 +295,14 @@ if [ -n "$APP_apk" ]; then
 	[ -n "$APP_stt" ] && LBLV+="\n|APP_stt=${APP_stt}|";
 	[ -n "$APP_prn" ] && LBLV+="\n|APP_prn=${APP_prn}|";
 	[ -n "$APP_prm" ] && LBLV+="\n\Zu|APP_prm|\Zn\n" &&\
-	LBLV+=$(sed -n '1,50p' <<<"${APP_prm//$'\n'/'\n'}") &&\
-	LBLV+="\n—————\n(head 50)";
+	LBLV+=$(sed -n '1,100p' <<<"${APP_prm//$'\n'/'\n'}") &&\
+	LBLV+="\n—————\n(head 100)";
 fi
 [ -n "$2" ] && if [ -f "$2" ]; then
 	# Add file to msgbox
 	LBLV+="\n\Zu|""$2""|\Zn\n";
-	LBLV+=$(sed -n '1,50p' "$2");
-	LBLV+="\n—————\n(head 50)";
+	LBLV+=$(sed -n '1,100p' "$2");
+	LBLV+="\n—————\n(head 100)";
 else
 	# Add variable(s) to msgbox
 	[ ${#@} -ge 2 ] && for ((i=2;i<=${#@};i++)); do
@@ -311,10 +311,10 @@ else
 		if [ "$l" -eq 1 ]; then
 			LBLV+="\n|${!i}=${!g}|";
 		else
-			l=$(sed -n '1,50p' <<<"${!g}");
+			l=$(sed -n '1,100p' <<<"${!g}");
 			LBLV+="\n\Zu|${!i}|\Zn\n";
 			LBLV+="${l//$'\n'/'\n'}";
-			LBLV+="\n—————\n(head 50)";
+			LBLV+="\n—————\n(head 100)";
 		fi
 	done
 fi;
@@ -446,6 +446,7 @@ function _adbman_dialog(){
 			;;
 		esac;
 	fi;
+
 }
 
 #»USER DATA
@@ -503,7 +504,7 @@ D:Dump App
 E:EnableDisable
 F:SuspendUnsuspend
 H:HideUnhide [root]
-I:Install/Uninstall
+I:InstallUninstall
 P:Permissions [<prn>]
 S:Force Stop
 U:User [APPUSER]'
@@ -511,19 +512,19 @@ U:User [APPUSER]'
 APPMLDMENU=\
 'MENU="$APPMLD";
 MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
-[ "${APP_ins}" == "true" ] &&\
-	MENU=$(sed "s+Install/++" <<<"$MENU") ||\
-	MENU=$(sed "s+/Uninstall++" <<<"$MENU");
-[ "${APP_enb}" -le 1 ] &&\
+[ ${APP_ins} -eq 1 ] &&\
+	MENU=$(sed "s+Install++" <<<"$MENU") ||\
+	MENU=$(sed "s+Uninstall++" <<<"$MENU");
+[ ${APP_enb} -le 1 ] &&\
 	MENU=$(sed "s+Enable++" <<<"$MENU") ||\
 	MENU=$(sed "s+Disable++" <<<"$MENU");
-[ "${APP_sus}" == "true" ] &&\
+[ ${APP_sus} -eq 1 ] &&\
 	MENU=$(sed "s+Suspend++" <<<"$MENU") ||\
 	MENU=$(sed "s+Unsuspend++" <<<"$MENU");
-[ "${APP_hid}" == "true" ] &&\
+[ ${APP_hid} -eq 1 ] &&\
 	MENU=$(sed "s+Hide++" <<<"$MENU") ||\
 	MENU=$(sed "s+Unhide++" <<<"$MENU");
-[ "${APP_prn}" -gt 0 ] &&\
+[ ${APP_prn} -gt 0 ] &&\
 	MENU=$(sed "s+<prn>+${APP_prn}+" <<<"$MENU") ||\
 	MENU=$(sed "/^P/d" <<<"$MENU");'
 #»Parafunc: Set LABEL for App Menu from APPINFO
@@ -537,15 +538,13 @@ LABEL="$LABEL\nStatus: ";
 [ "${APP_sys}" == "SYSTEM" ] &&\
 	LABEL="$LABEL ${APPCHS}System" ||\
 	LABEL="$LABEL ${APPCHT}ThirdParty";
-if [ "${APP_ins}" == "true" ];
-then [ "${APP_enb}" -le 1 ] &&\
+if [ ${APP_ins} -eq 1 ];
+then [ ${APP_enb} -le 1 ] &&\
 	LABEL="$LABEL, ${APPCHE}Enabled[${APP_enb}]" ||\
 	LABEL="$LABEL, ${APPCHD}Disabled[${APP_enb}]";
 else LABEL="$LABEL, ${APPCHU}Uninstalled"; fi;
-[ "${APP_sus}" == "true" ] &&\
-	LABEL="$LABEL, ${APPCHF}Suspended";
-[ "${APP_hid}" == "true" ] &&\
-	LABEL="$LABEL, ${APPCHH}Hidden";
+[ ${APP_sus} -eq 1 ] && LABEL="$LABEL, ${APPCHF}Suspended";
+[ ${APP_hid} -eq 1 ] && LABEL="$LABEL, ${APPCHH}Hidden";
 [ -n "${APP_fla}" ] &&\
 	LABEL="$LABEL\nFlags:   ${APP_fla}";
 LABEL="$LABEL\nStorage:";
@@ -555,30 +554,28 @@ LABEL="$LABEL Cache($(_adbman_sizeformat ${APP_stc})),";
 LABEL="$LABEL ∑($(_adbman_sizeformat ${APP_stt}))";'
 #»Parafunc: Set ADBOPT per App Menu List Dialog selected Option in DITAG
 APPMLDOPT=\
-'case "$DITAG" in\
-"C") ADBOPT="clear --user $APPUSER";;
-"E") [ ${APP_enb} -le 1 ]                       &&\
-ADBOPT=\
+'[ "$DITAG" == "C" ] && ADBOPT="clear --user $APPUSER";
+if [ "$DITAG" == "E" ]; then [ ${APP_enb} -le 1 ] &&\
+	ADBOPT=\
 "1:Disable (disable --user $APPUSER) [root]
 2:Disable (disable-user --user $APPUSER)
 3:Disable (disable-until-used --user $APPUSER)" ||\
-ADBOPT=\
+	ADBOPT=\
 "1:Enable (default-state --user $APPUSER)
-2:Enable (enable --user $APPUSER)";;
-"F") [ "${APP_sus}" == "true" ]    &&\
-ADBOPT="unsuspend --user $APPUSER" ||\
-ADBOPT="suspend --user $APPUSER";;
-"H") [ "${APP_hid}" == "true" ]    &&\
-ADBOPT="unhide --user $APPUSER"    ||\
-ADBOPT="hide --user $APPUSER"
-"I") [ "${APP_ins}" == "true" ]    &&\
-ADBOPT=\
+2:Enable (enable --user $APPUSER)"; fi;
+if [ "$DITAG" == "F" ]; then [ ${APP_sus} -eq 1 ] &&\
+	ADBOPT="unsuspend --user $APPUSER" ||\
+	ADBOPT="suspend --user $APPUSER"; fi;
+if [ "$DITAG" == "H" ]; then [ ${APP_hid} -eq 1 ] &&\
+	ADBOPT="unhide --user $APPUSER" ||\
+	ADBOPT="hide --user $APPUSER"; fi;
+if [ "$DITAG" == "I" ]; then [ ${APP_ins} -eq 1 ] &&\
+	ADBOPT=\
 "1:Uninstall and keep data (uninstall -k --user $APPUSER)
 2:Uninstall and remove data (uninstall --user $APPUSER)
 3:Uninstall and keep data (uninstall -k)
 4:Uninstall and remove data (uninstall)" ||\
-ADBOPT="install-existing --user $APPUSER";;
-esac;'
+	ADBOPT="install-existing --user $APPUSER"; fi'
 #»App Backup Options Dialog
 APPBOD=\
 '1:Backup
@@ -659,10 +656,10 @@ APP_cpa=''; # Package Path
 APP_rpa=''; # Resources Path
 APP_dpa=''; # Data Path
 APP_fla=''; # Flags
-APP_enb=''; # Enabled Status
-APP_hid=''; # Hidden Status
-APP_ins=''; # Installed Status
-APP_sus=''; # Suspended Status
+APP_enb=-1; # Enabled Status [0|1|2|3]
+APP_hid=-1; # Hidden Status [0|1]
+APP_ins=-1; # Installed Status [0|1]
+APP_sus=-1; # Suspended Status [0|1]
 APP_uid=''; # Package userID
 APP_gid=''; # Package groupIDs
 APP_ver=''; # Package Version
@@ -1125,7 +1122,7 @@ function _adbman_appinfo(){
 		sed '1,/^Packages/d' |\
 		sed '/^$/d;/^Hidden/q;' |\
 		sed -e :a -e '$!N;s/\n\s*gids=/ gids=/;ta' -e 'P;D' |\
-		sed '/^$/d;$d')"
+		sed '/^$/d;$d;/User/{s/true/1/g;s/false/0/g}')"
 	# Extract App Status
 	APP_apk=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*Package\s\[\(.*\)\].*/\1/p')
@@ -1156,7 +1153,6 @@ function _adbman_appinfo(){
 		sed -n 's/^\s*pkgFlags.*\(SYSTEM\).*$/\1/p')
 	_tifu _adbman_appinfo_perms;
 	_tifu _adbman_appinfo_size;
-	[ $PARALOG -gt 0 ] && _adbman_paralog '_appinfo' 'APPSTATS' 'APPACTTS'
 }
 
 #»SIZE FORMAT
@@ -1215,7 +1211,6 @@ function _adbman_exec(){
 		_adbman_log "[\$]$ADBCOM"
 		_adbman_log "[$ADBCODE]$LOG"
 	done
-	[ $PARALOG -gt 0 ] && _adbman_paralog 'Executed';
 	echo "$OUT"
 	return $DIACODE
 }
@@ -1481,9 +1476,7 @@ if [ -n "$ADBOPT" ]; then
 	MENU=''; DITAG=''; BCNCL='';
 	eval "$SETLABELAPP";
 	[ "$DIABOX" == '--menu' ] && MENU="$ADBOPT";
-	eval "$LOADDIASTATE";
 	_adbman_dialog;
-	eval "$SAVEDIASTATE";
 	[ -n "$DITAG" ] && ADBOPT=$(echo "$ADBOPT" |\
 			sed -n "/$DITAG/s/.*(\(.*\)).*/\1/p")
 	# Execute ADBOPT and display output msgbox
@@ -1561,17 +1554,16 @@ function _adbman_appinfo_menu(){
 		3)#${DIALOG_EXTRA-3})
 			break;;
 		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPLX' 'APPIX';
-		;;
+			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPSTATS' 'APPACTTS';;
 		*)#Cancel
 			break;;
 		esac
 	done
 	# If APPLX changed then refresh PKGLIST, set APPLX=0
 	if [ $APPLX -eq 1 ]; then
-	APPLX=0
-	_tifu _adbman_dumppackages
-	_tifu _adbman_appfilter
+		_tifu _adbman_dumppackages
+		_tifu _adbman_appfilter
+		APPLX=0
 	fi
 	eval "$CLEARDIASTATE";
 }
