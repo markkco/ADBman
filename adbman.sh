@@ -95,6 +95,7 @@ function _tifu(){
 #»Set Dialog Variables
 function _adbman_diavars(){
 #»dialog "${DIAOPT[@]}" "$DIABOX" "$LABEL" "$HGHT" "$WDTH"
+DIABOX='';      # --menu|--checklist|--radiolist|--inputmenu|--textbox|--yesno|--msgbox
 DTITLE='';      # --title "$DTITLE"
 BTITLE='';      # --backtitle "$BTITLE"
 BTLYS='';       # --yes-label "$BTLYS"
@@ -118,8 +119,10 @@ DIALOG=();      # Dialog command with options array
 DIAOUT=();      # Dialog output array
 ((DIACODE=-2)); # Dialog return code
 DINPUT='';      # Dialog InputMenu output: RENAMED $DITAG $DINPUT
-((DINPUTOK=0)); # DINPUT=0:empty|1:ok|1:bad, run:eval "$CHECKDINPUT"
-DIASTATE='';    # Saved Dialog options list
+((DINPUTOK=0)); # DINPUTOK=0:empty|1:ok|2:bad, run:eval "$CHECKDINPUT"
+DIASTATE='';    # Saved Dialog options list, use:eval "$SAVEDIASTATE" | "$LOADDIASTATE"
+DIALID='';      # Dialog Menu LEVEL ID (Main|Applist|Appinfo|Install|Confirm|Message|...)
+DIALVL='';      # Dialog Menu LEVEL (:Main:Applist:Appinfo:Install:Confirm:Message:)
 #»»»»»»»»»»»
 DIAOPT=("--no-shadow" "--colors");
 }
@@ -334,6 +337,7 @@ while true; do
 		--title "$TTL" \
 		--extra-button --extra-label "$BXT" \
 		--msgbox "$LBL" $PDH $PDW \
+		--max-input 8192 \
 		--output-fd 1;
 	DXC=$?;
 	case $DXC in
@@ -411,8 +415,15 @@ function _adbman_dialog(){
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH);
 		fi;
 		# Execute dialog
-		DIAOUT="$("${DIALOG[@]}" --output-fd 1)";
-		DIACODE=$?;
+		while true; do
+			DIAOUT="$("${DIALOG[@]}" --max-input 8192 --output-fd 1)";
+			DIACODE=$?;
+			# Call Paralog with <ESC>
+			[ $PARALOG -eq 0 ] && break ||\ 
+			if [ $DIACODE -eq 255 ]; then
+				_adbman_paralog "$PARARGS"
+			fi
+		done
 		# Set BTDEF pressed, DITAG choice, DINPUT user input
 		case $DIACODE in
 		0)	BTDEF='ok';;
@@ -446,7 +457,6 @@ function _adbman_dialog(){
 			;;
 		esac;
 	fi;
-
 }
 
 #»USER DATA
@@ -671,6 +681,10 @@ APP_sta=0;  # Package apk Size
 APP_stc=0;  # Package cache Size
 APP_std=0;  # Package data Size
 APP_stt=0;  # Package total Size
+#»Include parameters in Paralog per dialog menu
+# PARARGS="$(\
+# case $DCURRENT in\
+# esac)"
 }
 _tifu _adbman_datavars
 # echo "$(date +'[%T:%N]')>_adbman_datavars"
@@ -1554,8 +1568,8 @@ function _adbman_appinfo_menu(){
 			esac;;
 		3)#${DIALOG_EXTRA-3})
 			break;;
-		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPSTATS' 'APPACTTS';;
+		# 255)#Esc-to-Paralog
+		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPSTATS' 'APPACTTS';;
 		*)#Cancel
 			break;;
 		esac
@@ -1612,9 +1626,9 @@ function _adbman_applist_menu(){
 		3)#${DIALOG_EXTRA-3})
 			_adbman_appfilter_checklist;
 			;;
-		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
-			;;
+		# 255)#Esc-to-Paralog
+		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
+		# 	;;
 		*)#Cancel
 			break;
 			;;
@@ -1635,9 +1649,9 @@ function _adbman_options(){
 		0)#OK
 			break
 			;;
-		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" "$ADBMANC";
-			;;
+		# 255)#Esc-to-Paralog
+		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" "$ADBMANC";
+		# 	;;
 		*)#CANCEL
 			break
 			;;
@@ -1663,9 +1677,9 @@ function _adbman_user(){
 				APPUSER=$DIAOUT;
 			fi
 			;;
-		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPLX' 'APPIX' 'PKGDUMP';
-			;;
+		# 255)#Esc-to-Paralog
+		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPLX' 'APPIX' 'PKGDUMP';
+		# 	;;
 		*)#Cancel
 			break
 			;;
@@ -1743,9 +1757,9 @@ function _adbman_main_menu(){
 			;;
 		3)#${DIALOG_EXTRA-3})
 			;;
-		255)#Esc-to-Paralog
-			[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
-			;;
+		# 255)#Esc-to-Paralog
+		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
+		# 	;;
 		*)#Cancel
 			_adbman_exit;
 			;;
