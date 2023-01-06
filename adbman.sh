@@ -97,13 +97,13 @@ function _adbman_diavars(){
 #»dialog "${DIAOPT[@]}" "$DIABOX" "$LABEL" "$HGHT" "$WDTH"
 DTITLE='';      # --title "$DTITLE"
 BTITLE='';      # --backtitle "$BTITLE"
-BLYES='';       # --yes-label "$BLYES"
-BLNOO='';       # --no-label "$BLNOO"
-BOKAY='';       # --ok-label "$BOKAY"
-BCNCL='';       # --cancel-label "$BCNCL"
-BXTRA='';       # --extra-button --extra-label "$BXTRA"
-BHELP='';       # --help-button --help-label "$BHELP"
-DBTTN='';       # --default-button "$DBTTN" (ok|cancel|extra|help)
+BTLYS='';       # --yes-label "$BTLYS"
+BTLNO='';       # --no-label "$BTLNO"
+BTLOK='';       # --ok-label "$BTLOK"
+BTLCL='';       # --cancel-label "$BTLCL"
+BTLXT='';       # --extra-button --extra-label "$BTLXT"
+BTLHL='';       # --help-button --help-label "$BTLHL"
+BTDEF='';       # --default-button "$BTDEF" (ok|cancel|extra|help)
 DITAG='';       # --default-item "$DITAG"
 LABEL='';       # Dialog Label (text)
 MENU='';        # Menu/Checklist/InputMenu list: tag1:item1:..
@@ -169,26 +169,26 @@ SETLABELAPP=\
 '[ "${APP_sys}" == "SYSTEM" ] &&\
 LABEL="Package:${APPCHS}$APPNAME" ||\
 LABEL="Package:${APPCHT}$APPNAME";'
-#»SAVE/LOAD/CLEAR DIALOG (only DTITLE, DBTTN, DITAG) to DIASTATE
-#»Save (DTITLE, DBTTN, DITAG) to DIASTATE (Trim:' [*' from DTITLE)
+#»SAVE/LOAD/CLEAR DIALOG (only DTITLE, BTDEF, DITAG) to DIASTATE
+#»Save (DTITLE, BTDEF, DITAG) to DIASTATE (Trim:' [*' from DTITLE)
 SAVEDIASTATE=\
 'DIASTATE=$(sed "/${DTITLE%% [*}/d" <<<"$DIASTATE");
-DIASTATE+="${nln}DTITLE=${DTITLE%% [*}:DBTTN=$DBTTN=DBTTN:DITAG=$DITAG=DITAG:";
+DIASTATE+="${nln}DTITLE=${DTITLE%% [*}:BTDEF=$BTDEF=BTDEF:DITAG=$DITAG=DITAG:";
 DIASTATE=$(sed "/^\$/d" <<<"$DIASTATE")'
-#»Load DIALOG state (DTITLE, DBTTN, DITAG) from DIASTATE
+#»Load DIALOG state (DTITLE, BTDEF, DITAG) from DIASTATE
 LOADDIASTATE=\
-'DBTTN=$(echo "$DIASTATE" |\
-sed -n "/${DTITLE%% [*}/s/.*:DBTTN=\(.*\)=DBTTN:.*/\1/p");
+'BTDEF=$(echo "$DIASTATE" |\
+sed -n "/${DTITLE%% [*}/s/.*:BTDEF=\(.*\)=BTDEF:.*/\1/p");
 DITAG=$(echo "$DIASTATE" |\
 sed -n "/${DTITLE%% [*}/s/.*:DITAG=\(.*\)=DITAG:.*/\1/p");'
-#»Clear current DIALOG state (DTITLE, DBTTN, DITAG) from DIASTATE
+#»Clear current DIALOG state (DTITLE, BTDEF, DITAG) from DIASTATE
 CLEARDIASTATE=\
 'DIASTATE=$(echo "$DIASTATE" | sed -n "/${DTITLE%% [*}/d");'
 CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
-DBTTN=""; BLYES=""; BLNOO=""; BOKAY=""; BCNCL=""; BXTRA=""; BHELP="";
+BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";
 LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
-CLEARDIABTTN='DBTTN=""; BOKAY=""; BCNCL=""; BXTRA=""; BHELP=""'
+CLEARDIABTTN='BTDEF=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL=""'
 }
 _tifu _adbman_diavarf
 # echo "$(date +'[%T:%N]')>_adbman_dialogvars"
@@ -244,18 +244,18 @@ local -i DXC=0 PDW=0 PDH=0;
 [ -n "$DIABOX" ] && LBLV="|DIABOX=$DIABOX|";
 [ -n "$DTITLE" ] && LBLV+="|DTITLE=$DTITLE|";
 [ -n "$BTITLE" ] && LBLV+="\n|BTITLE=$BTITLE|";
-[ -n "$BLYES$BLNOO$BOKAY$BCNCL$BXTRA$BHELP" ] && LBL+="\n";
-[ -n "$BLYES" ] && LBLV+="|BLYES=$BLYES|";
-[ -n "$BLNOO" ] && LBLV+="|BLNOO=$BLNOO|";
-[ -n "$BOKAY" ] && LBLV+="|BOKAY=$BOKAY|";
-[ -n "$BCNCL" ] && LBLV+="|BCNCL=$BCNCL|";
-[ -n "$BXTRA" ] && LBLV+="|BXTRA=$BXTRA|";
-[ -n "$BHELP" ] && LBLV+="|BHELP=$BHELP|";
+[ -n "$BTLYS$BTLNO$BTLOK$BTLCL$BTLXT$BTLHL" ] && LBL+="\n";
+[ -n "$BTLYS" ] && LBLV+="|BTLYS=$BTLYS|";
+[ -n "$BTLNO" ] && LBLV+="|BTLNO=$BTLNO|";
+[ -n "$BTLOK" ] && LBLV+="|BTLOK=$BTLOK|";
+[ -n "$BTLCL" ] && LBLV+="|BTLCL=$BTLCL|";
+[ -n "$BTLXT" ] && LBLV+="|BTLXT=$BTLXT|";
+[ -n "$BTLHL" ] && LBLV+="|BTLHL=$BTLHL|";
 [ "$WDTH" -ge -1 ] && LBLV+="\n|WDTH=$WDTH|";
 [ "$HGHT" -ge -1 ] && LBLV+="|HGHT=$HGHT|";
 [ "$SIZE" -ge -1 ] && LBLV+="|SIZE=$SIZE|";
 [ "$DIACODE" -ge -1 ] && LBLV+="\n|DIACODE=$DIACODE|";
-[ -n "$DBTTN" ] && LBLV+="|DBTTN=$DBTTN|";
+[ -n "$BTDEF" ] && LBLV+="|BTDEF=$BTDEF|";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
 [ -n "$DITAG" ] && LBLV+="|DITAG=$DITAG|";
 [ -n "$DINPUT" ] && LBLV+="|DINPUT=$DINPUT|";
@@ -378,20 +378,20 @@ function _adbman_dialog(){
 		DIALOG=(dialog);
 		DIALOG+=("${DIAOPT[@]}");
 		# Only nonempty option params included
-		[ -n "$BLYES" ] &&\
-			DIALOG+=('--yes-label' "$BLYES");
-		[ -n "$BLNOO" ] &&\
-			DIALOG+=('--no-label' "$BLNOO");
-		[ -n "$BOKAY" ] &&\
-			DIALOG+=('--ok-label' "$BOKAY");
-		[ -n "$BCNCL" ] &&\
-			DIALOG+=('--cancel-label' "$BCNCL");
-		[ -n "$BXTRA" ] &&\
-			DIALOG+=('--extra-button' '--extra-label' "$BXTRA");
-		[ -n "$BHELP" ] &&\
-			DIALOG+=('--help-button' '--help-label' "$BHELP");
-		[ -n "$DBTTN" ] &&\
-			DIALOG+=('--default-button' "$DBTTN");
+		[ -n "$BTLYS" ] &&\
+			DIALOG+=('--yes-label' "$BTLYS");
+		[ -n "$BTLNO" ] &&\
+			DIALOG+=('--no-label' "$BTLNO");
+		[ -n "$BTLOK" ] &&\
+			DIALOG+=('--ok-label' "$BTLOK");
+		[ -n "$BTLCL" ] &&\
+			DIALOG+=('--cancel-label' "$BTLCL");
+		[ -n "$BTLXT" ] &&\
+			DIALOG+=('--extra-button' '--extra-label' "$BTLXT");
+		[ -n "$BTLHL" ] &&\
+			DIALOG+=('--help-button' '--help-label' "$BTLHL");
+		[ -n "$BTDEF" ] &&\
+			DIALOG+=('--default-button' "$BTDEF");
 		[ -n "$DITAG" ] &&\
 			DIALOG+=('--default-item' "$DITAG");
 		[ -n "$BTITLE" ] &&\
@@ -413,12 +413,12 @@ function _adbman_dialog(){
 		# Execute dialog
 		DIAOUT="$("${DIALOG[@]}" --output-fd 1)";
 		DIACODE=$?;
-		# Set DBTTN pressed, DITAG choice, DINPUT user input
+		# Set BTDEF pressed, DITAG choice, DINPUT user input
 		case $DIACODE in
-		0)	DBTTN='ok';;
-		1)	DBTTN='cancel';;
-		2)	DBTTN='help';;
-		3)	DBTTN='extra';;
+		0)	BTDEF='ok';;
+		1)	BTDEF='cancel';;
+		2)	BTDEF='help';;
+		3)	BTDEF='extra';;
 		esac;
 		case "$DIABOX" in
 		'--inputmenu')
@@ -869,7 +869,7 @@ function _adbman_appfilter_edit(){
 	local TMPFCD="$APPFCD" l='';
 	while true; do
 		DTITLE="Custom Filters"; DIABOX='--inputmenu';
-		BXTRA='Edit'; BHELP='Clear';
+		BTLXT='Edit'; BTLHL='Clear';
 		LABEL=""; #"Edit Custom Filters:"
 		eval "$APPFCDMENU";
 		eval "$LOADDIASTATE";
@@ -914,7 +914,7 @@ eval "$CLEARDIAVARS";
 # Save Custom filters in case of Cancel
 local TMPFSD="$APPFSD" TMPFCD="$APPFCD";
 while true; do
-	DTITLE="Filters"; DIABOX='--checklist'; BXTRA='Custom';
+	DTITLE="Filters"; DIABOX='--checklist'; BTLXT='Custom';
 	LABEL='Select Filters:';
 	MENU="$APPFSD$nln$APPFCD"
 	_adbman_dialog;
@@ -1060,7 +1060,7 @@ function _adbman_appinfo_dumpview(){
 		else DTITLE="Package Dump:${APPCHT}$APPNAME";
 	fi
 	if [ -f "$ADBMANP/$APPNAME" ]; then
-		DIABOX='--yesno'; BLYES='View'; BLNOO='reDump'
+		DIABOX='--yesno'; BTLYS='View'; BTLNO='reDump'
 		LABEL="Dump already exist:\n$ADBMANP/$APPNAME"
 		[ $PARALOG -gt 0 ] && _adbman_paralog 'App Dump - View existing';
 		_adbman_dialog
@@ -1072,7 +1072,7 @@ function _adbman_appinfo_dumpview(){
 			_adbman_log "[$DIACODE]$ADBOUT"
 		fi
 	fi
-	BLYES=''; BLNOO='';
+	BTLYS=''; BTLNO='';
 	while true; do
 	if [ ! -f "$ADBMANP/$APPNAME" ]; then
 		ADBOPT="adb shell pm dump $APPNAME >$ADBMANP/$APPNAME"
@@ -1089,7 +1089,7 @@ function _adbman_appinfo_dumpview(){
 		DIABOX='--textbox';
 		LABEL="$ADBMANP/$APPNAME";
 		_adbman_dialog;
-		DIABOX='--yesno'; DBTTN='cancel';
+		DIABOX='--yesno'; BTDEF='cancel';
 		LABEL="Remove file:\n$ADBMANP/$APPNAME"
 		_adbman_dialog
 		if [ $DIACODE -eq 0 ]; then
@@ -1249,7 +1249,7 @@ function _adbman_appback_options(){
 		eval "$CLEARDIAVARS";
 		DTITLE="Backup Options"; DIABOX='--checklist';
 		LABEL="Directory:$ADBMANA\nFile Name:$ADBMANF"
-		DBTTN='ok'; BXTRA='Dir/File';
+		BTDEF='ok'; BTLXT='Dir/File';
 		# Remove short options (:apk:) from APPFBD for MENU
 		MENU="$APPFBD" && MENU="$(echo "$MENU" |\
 			sed -n 's/^\(.\):\S\+:\(.*\)$/\1:\2/p')"
@@ -1267,7 +1267,7 @@ function _adbman_appback_options(){
 			while true; do
 				eval "$CLEARDIAVARS"
 				DTITLE="Backup Directory and File Name"
-				DBTTN='cancel'; BXTRA='Edit'; BHELP='Reset';
+				BTDEF='cancel'; BTLXT='Edit'; BTLHL='Reset';
 				MENU="Directory:$ADBMANB${nln}File-Name:$ADBMANF"
 				DIABOX='--inputmenu';
 				eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
@@ -1327,7 +1327,7 @@ function _adbman_appback_menu(){
 	while true; do
 		eval "$CLEARDIAVARS";
 		DTITLE="App Backup and Restore"; DIABOX='--menu';
-		MENU="$APPBOD"; DBTTN='ok'; BXTRA='Options';
+		MENU="$APPBOD"; BTDEF='ok'; BTLXT='Options';
 		eval "$SETLABELAPP"
 		LABEL="$LABEL\nDirectory:$ADBMANA\nFile Name:$ADBMANF"
 		# Refresh Option list, remove last 'include system'
@@ -1358,7 +1358,7 @@ function _adbman_appback_menu(){
 			eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
 			[ $PARALOG -gt 0 ] && _adbman_paralog 'AppBackupMenu-BackupConfirm';
 			if [ $DIACODE -eq 0 ]; then
-				DIABOX='--msgbox'; DBTTN='cancel'
+				DIABOX='--msgbox'; BTDEF='cancel'
 				LABEL=$(_adbman_exec "$APPNAME" "$ADBOPT")
 				DIACODE=$?
 				eval "$SETDIAMSGBOX"
@@ -1385,16 +1385,16 @@ function _adbman_appperms_menu(){
 	local CURPERMS ALLPERMS NONPERMS STATE='Current';
 	# Check if All/None permissions are already set
 	[ -z "$(echo "$APPPERMS" | sed -n '/on$/p')" ] &&\
-		BXTRA='All' && STATE='None';
+		BTLXT='All' && STATE='None';
 	[ -z "$(echo "$APPPERMS" | sed -n '/off$/p')" ] &&\
-	BXTRA='None' && STATE='All';
-	BXTRA='All';
+	BTLXT='None' && STATE='All';
+	BTLXT='All';
 	CURPERMS="$APPPERMS";
 	ALLPERMS=$(echo "$APPPERMS" | sed 's/off$/on/');
 	NONPERMS=$(echo "$APPPERMS" | sed 's/on$/off/');
 	while true; do
 		DTITLE="App Permissions [${APP_prn}]"
-		DIABOX='--checklist'; BCNCL='Back';
+		DIABOX='--checklist'; BTLCL='Back';
 		eval "$SETLABELAPP"; # LABEL=[sys|user]<package>
 		LABEL="$LABEL\n${APPOPL//$'\n'/'  '}";
 		MENU="$APPPERMS"; # Create checklist MENU
@@ -1442,24 +1442,24 @@ function _adbman_appperms_menu(){
 					APPIX=0;
 					CURPERMS="$APPPERMS";
 				fi
-				STATE='Current'; BXTRA='All';
+				STATE='Current'; BTLXT='All';
 			fi
 			;;
 		3)#${DIALOG_EXTRA-3})
-			case "$BXTRA" in
+			case "$BTLXT" in
 			'All')
 				APPPERMS="$ALLPERMS"
 				[ "$STATE" == 'None' ] && \
-					BXTRA='Current' || BXTRA='None'
+					BTLXT='Current' || BTLXT='None'
 				;;
 			'None')
 				APPPERMS="$NONPERMS"
-				BXTRA='Current'
+				BTLXT='Current'
 				;;
 			'Current')
 				APPPERMS="$CURPERMS"
 				[ "$STATE" == 'All' ] && \
-					BXTRA='None' || BXTRA='All'
+					BTLXT='None' || BTLXT='All'
 				;;
 			esac
 			;;
@@ -1474,7 +1474,7 @@ function _adbman_appperms_menu(){
 #»requres: DTITLE, DIABOX, ADBOPT, APPNAME set
 function _adbman_appmod(){
 if [ -n "$ADBOPT" ]; then
-	MENU=''; DITAG=''; BCNCL='';
+	MENU=''; DITAG=''; BTLCL='';
 	eval "$SETLABELAPP";
 	[ "$DIABOX" == '--menu' ] && MENU="$ADBOPT";
 	_adbman_dialog;
@@ -1504,7 +1504,7 @@ function _adbman_appinfo_menu(){
 		# Refresh APPINFO only if APPIX changed and reset APPIX
 		if [ $APPIX -eq 1 ]; then
 		_tifu _adbman_appinfo; APPIX=0; fi;
-		DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BCNCL='Back'
+		DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BTLCL='Back'
 		eval "$APPMLDLABEL"; # LABEL for App Menu
 		eval "$APPMLDMENU"; # MENU from APPMLD
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
@@ -1583,9 +1583,9 @@ function _adbman_applist_menu(){
 		eval "$CLEARDIAVARS";
 		_tifu _adbman_applist "${SORT[$s]}"
 		DTITLE="Application List [User:$APPUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
-		DIABOX='--menu'; BXTRA='Filter'; BCNCL='Back';
+		DIABOX='--menu'; BTLXT='Filter'; BTLCL='Back';
 		# WDTH=-1; HGHT=-1;
-		BHELP="${SORT[$(($s+1))]}";
+		BTLHL="${SORT[$(($s+1))]}";
 		MENU="$APPLFD"
 		LABEL="\ZuStatus Filters\Zn:$APPCH1"
 		LABEL="$LABEL\n${APPOSL//$'\n'/' '}"
@@ -1651,7 +1651,7 @@ function _adbman_user(){
 	APPLX=0;
 	eval "$CLEARDIAVARS";
 	DTITLE="User List [User:$APPUSER]"
-	DIABOX='--radiolist'; BCNCL='Back'; APPLX=0;
+	DIABOX='--radiolist'; BTLCL='Back'; APPLX=0;
 	eval "$MANUSRMENU" # Create MENU from MANUSR
 	LABEL="\ZuChoose User\Zn:"
 	while true; do
@@ -1700,7 +1700,7 @@ function _adbman_main_menu(){
 		BTITLE="ADBman - ADB Manager";
 		DTITLE="ADBman Menu"; DIABOX='--menu';
 		LABEL="Select Option:"
-		DBTTN='ok' BCNCL='Exit';
+		BTDEF='ok' BTLCL='Exit';
 		eval "$MANMLDMENU"; # Create MENU from MANMLD
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE"
 		case $DIACODE in
