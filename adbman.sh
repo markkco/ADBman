@@ -512,21 +512,22 @@ U:User [APPUSER]'
 APPMLDMENU=\
 'MENU="$APPMLD";
 MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
-[ ${APP_ins} -eq 1 ] &&\
-	MENU=$(sed "s+Install++" <<<"$MENU") ||\
-	MENU=$(sed "s+Uninstall++" <<<"$MENU");
-[ ${APP_enb} -le 1 ] &&\
-	MENU=$(sed "s+Enable++" <<<"$MENU") ||\
-	MENU=$(sed "s+Disable++" <<<"$MENU");
-[ ${APP_sus} -eq 1 ] &&\
-	MENU=$(sed "s+Suspend++" <<<"$MENU") ||\
-	MENU=$(sed "s+Unsuspend++" <<<"$MENU");
-[ ${APP_hid} -eq 1 ] &&\
-	MENU=$(sed "s+Hide++" <<<"$MENU") ||\
-	MENU=$(sed "s+Unhide++" <<<"$MENU");
-[ ${APP_prn} -gt 0 ] &&\
-	MENU=$(sed "s+<prn>+${APP_prn}+" <<<"$MENU") ||\
-	MENU=$(sed "/^P/d" <<<"$MENU");'
+if [ ${APP_ins} -eq 1 ]; then\
+	MENU=$(sed "s+Install++" <<<"$MENU"); 
+	[ ${APP_enb} -le 1 ] &&\
+		MENU=$(sed "s+Enable++" <<<"$MENU") ||\
+		MENU=$(sed "s+Disable++" <<<"$MENU");
+	[ ${APP_sus} -eq 1 ] &&\
+		MENU=$(sed "s+Suspend++" <<<"$MENU") ||\
+		MENU=$(sed "s+Unsuspend++" <<<"$MENU");
+	[ ${APP_hid} -eq 1 ] &&\
+		MENU=$(sed "s+Hide++" <<<"$MENU") ||\
+		MENU=$(sed "s+Unhide++" <<<"$MENU");
+	[ ${APP_prn} -gt 0 ] &&\
+		MENU=$(sed "s+<prn>+${APP_prn}+" <<<"$MENU") ||\
+		MENU=$(sed "/^P/d" <<<"$MENU");
+else\
+	MENU=$(sed "/^I\|^D\|^U/!d;s+Uninstall++" <<<"$MENU"); fi'
 #»Parafunc: Set LABEL for App Menu from APPINFO
 APPMLDLABEL=\
 'LABEL="Package: $APPNAME";
