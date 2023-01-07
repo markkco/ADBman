@@ -15,11 +15,12 @@ Created in `termux` self-debug environment.
 ## FEATURES
 * App list with filtering options
 * Manage single app:
+    * install-existing/uninstall
     * enable/disable
     * suspend/unsuspend
     * hide/unhide [root]
     * manage runtime permissions
-    * clear-data
+    * clear data
     * backup/restore
     * view dump
 * History log
