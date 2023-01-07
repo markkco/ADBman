@@ -15,6 +15,7 @@ Created in `termux` self-debug environment.
 ## FEATURES
 * App list with filtering options
 * Manage single app:
+    * backup
     * install-existing/uninstall
     * enable/disable
     * suspend/unsuspend
@@ -27,10 +28,9 @@ Created in `termux` self-debug environment.
 * Script config in ~/.adbman
 
 ## TODO
-* Finish app backup
-* Add per user app management
+* Finish app restore
 * Add adb log view
-* Add Settings 
+* Add adb settings
 
 ## Known issues
 * `adb shell dumpsys diskstats` does not show recent package storage change
