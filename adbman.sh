@@ -91,6 +91,19 @@ function _tifu(){
 ";
 }
 
+#»FILE LIST
+#»List files in folder recursively: flist "/path/to"
+function flist(){
+	if [ -d "$1" ]; then
+		for i in "$1"/*; do
+			[ -d "$i" ] && flist "$i" ||\
+			[ -f "$i" ] && echo "$i";
+		done;
+	else [ -f "$1" ] &&	echo "$1" ||\
+			return 1;
+  fi;
+}
+
 #»DIALOG VARS
 #»Set Dialog Variables
 function _adbman_diavars(){
