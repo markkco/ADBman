@@ -420,7 +420,8 @@ function _adbman_dialog(){
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH);
 		fi;
 		# Set DIALVL Menu path
-		local lvl=$(echo "$DIALVL" | sed -n "/$DIALID/s/>$DIALID.*/>$DIALID/p");
+		local lvl=$([ -n "$DIALID" ] && echo "$DIALVL" |\
+			sed -n "/$DIALID/s/>$DIALID.*/>$DIALID/p");
 		[ -n "$lvl" ] && DIALVL="$lvl" || DIALVL+=">$DIALID";
 		unset lvl;
 		# Execute dialog
@@ -473,7 +474,7 @@ function _adbman_dialog(){
 #»USER DATA
 function _adbman_userdata(){
 	ADBMANA="$ADBMANB" # Backup path:$ADBMANB/ || $ADBMANB/<package>/
-	ADBMANF="<package>" # Backup file name:<package> || custom
+	ADBMANF="<package>-<time>" # Backup file name, templates: <package>, <time> 
 	ADBMANP="$HOME/.adbman"
 	ADBMANB="$ADBMANP/backup"
 	ADBMANC="$ADBMANP/adbman.cfg"
@@ -655,7 +656,10 @@ APPOPL="\Z4${PRMCHD}\Zn:Declared
 \Z5${PRMCHN}\Zn:Runtime
 \Z1${PRMCHR}\Zn:Restricted"
 #»Set ADBMANA='$ADBMANB/ || $ADBMANB/<package>/' from APPFBD
-SETADBMANA='[ -n "$(sed -n "/^D:.*:on$/p" <<<"$APPFBD")" ] &&	ADBMANA="$ADBMANB/<package>/" || ADBMANA="$ADBMANB/"';
+SETADBMANA=\
+'[ -n "$(sed -n "/^D:.*:on$/p" <<<"$APPFBD")" ] &&\
+ADBMANA="$ADBMANB/<package>/" ||\
+ADBMANA="$ADBMANB/"';
 }
 _tifu _adbman_menuvars
 # echo "$(date +'[%T:%N]')>_adbman_menuvars"
@@ -1304,7 +1308,7 @@ function _adbman_appback_options(){
 				2)#Clear input
 					case "$DITAG" in
 					'Directory')	ADBMANB="$ADBMANP/backup";;
-					'File-Name')	ADBMANF="<package>";;
+					'File-Name')	ADBMANF="<package>-<time>";;
 					esac
 					;;
 				3)#Edit input
@@ -1349,7 +1353,7 @@ function _adbman_appback_menu(){
 # restore FILE   restore device contents from FILE
 	while true; do
 		eval "$CLEARDIAVARS";
-		DTITLE="App Backup and Restore";
+		DTITLE="App Backup & Restore";
 		DIABOX='--menu'; DIALID='AppBackup'
 		MENU="$APPBOD"; BTDEF='ok'; BTLXT='Options';
 		eval "$SETLABELAPP"
@@ -1357,36 +1361,43 @@ function _adbman_appback_menu(){
 		# Refresh Option list, remove last 'include system'
 		eval "$SETAPPOBL" && APPOBL=$(sed '$d' <<<"$APPOBL")
 		LABEL="$LABEL\nOptions: ${APPOBL//$'\n'/'  '}"
-		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
+		_adbman_dialog;
 		case $DIACODE in
 		0)#Backup/Restore
-			# Prepare backup arguments per user options
-			ADBOPT="$(echo "$APPFBD" | sed -n '1,3p' |\
-				sed -n 's/.:\(\S\+\):.*:on/-\1/p')"
-			# If split option is off: args on 1 line; else: each line)
-			[ -n "$(sed -n '/E:.*:off/p' <<<"$APPFBD")" ] &&\
-				ADBOPT="adb backup ${ADBOPT//$'\n'/' '} -f \"<file>${ADBOPT//$'\n'/}<time>.adb\" <package>" ||\
+			case "$DITAG" in
+			1)#Backup
+				eval "$CLEARDIAVARS"
+				# Prepare backup arguments (first 3) per user options in APPFBD
+				ADBOPT="$(echo "$APPFBD" | sed -n '1,3p' |\
+					sed -n 's/.:\(\S\+\):.*:on/-\1/p')"
+				# If split option is off: all args on 1 line; else: each line)
+				[ -n "$(sed -n '/E:.*:off/p' <<<"$APPFBD")" ] &&\
+					ADBOPT="adb backup ${ADBOPT//$'\n'/' '} -f <file>${ADBOPT//$'\n'/}.adb <package>" ||\
+					ADBOPT="$(echo "$ADBOPT" |\
+						sed 's/\(-\S\+\)/adb backup \1 -f <file>\1.adb <package>/')";
+				# Set <package> and <time>
 				ADBOPT="$(echo "$ADBOPT" |\
-					sed 's/\(-\S\+\)/adb backup \1 -f "<file>\1<time>.adb" <package>/')";
-			ADBOPT=$(echo "$ADBOPT" |\
-				sed 's/>-apk\(.*\)</>a\1</;s/>\(.*\)-obb\(.*\)</>\1o\2</;s/>\(.*\)-storage</>\1s</;s/file>\(.*\)<time/file>[\1]<time/')
-			# ADBOPT="${ADBOPT//'-storage<'/'S<'}"
-			# Confirm Dialog
-			eval "$CLEARDIAVARS"
-			DTITLE="App Backup and Restore";
-			DIABOX='--yesno'; DIALID='AppBackup'
-			eval "$SETLABELAPP"
-			LABEL="$LABEL\nDirectory:$ADBMANA"
-			LABEL="$LABEL\n\nBackup:"
-			LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
-			eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
-			if [ $DIACODE -eq 0 ]; then
-				DIABOX='--msgbox'; DIALID='Message';
-				LABEL=$(_adbman_exec "$APPNAME" "$ADBOPT")
-				DIACODE=$?
-				eval "$SETDIAMSGBOX"
-				$("${DIALOG[@]}" --output-fd 1)
-			fi
+					sed "s+<file>+$ADBMANA$ADBMANF+g" |\
+					sed "s/<time>/$(date +'%Y%m%d%H%M')/g" |\
+					sed "s+<package>+$APPNAME+g")"
+				# Add Create Folder to ADBOPT command list
+				[ ! -d "$ADBMANA" ] && ADBOPT="mkdir ${ADBMANA::-1}${nln}$ADBOPT"
+				# Confirm Dialog
+				DTITLE="App Backup";
+				eval "$SETLABELAPP"
+				LABEL="$LABEL\nDirectory:$ADBMANA"
+				LABEL="$LABEL\n\nBackup:"
+				LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
+				DIABOX='--yesno'; DIALID='Confirm'; _adbman_dialog;
+				if [ $DIACODE -eq 0 ]; then
+					LABEL="$(_adbman_exec)"
+					DIACODE=$?
+					DIABOX='--msgbox'; DIALID='Message'; _adbman_dialog;
+				fi
+				;;
+			2)#Restore
+				;;
+			esac
 			;;
 		3)#Options
 			# No subshell!
