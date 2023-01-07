@@ -187,11 +187,16 @@ sed -n "/${DTITLE%% [*}/s/.*:DITAG=\(.*\)=DITAG:.*/\1/p");'
 #»Clear current DIALOG state (DTITLE, BTDEF, DITAG) from DIASTATE
 CLEARDIASTATE=\
 'DIASTATE=$(echo "$DIASTATE" | sed -n "/${DTITLE%% [*}/d");'
-CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; BTITLE="";
+CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; DIALID=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
 BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";
 LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
 CLEARDIABTTN='BTDEF=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL=""'
+#»Set Custom Parameters per MenuID DIALID to ParaLog argument PARARG
+PARARGSET='PARARG=("$DTITLE");
+[ "$DIALID" == "AppInfo" ] && PARARG+=("APPSTATS" "APPACTTS");
+[ "$DIALID" == "Options" ] && PARARG+=("$ADBMANC");
+[ "$DIALID" == "User" ] && PARARG+=("PKGDUMP");'
 }
 _tifu _adbman_diavarf
 # echo "$(date +'[%T:%N]')>_adbman_dialogvars"
@@ -244,8 +249,9 @@ local MNU='' LBL='' TTL="$1" BXT='times'
 local LBLV='' LBLT='' g='' l='';
 local -i DXC=0 PDW=0 PDH=0;
 #Create vars Label
-[ -n "$DIABOX" ] && LBLV="|DIABOX=$DIABOX|";
-[ -n "$DTITLE" ] && LBLV+="|DTITLE=$DTITLE|";
+LBLV="|DIALID=$DIALID|DIALVL=$DIALVL|\n";
+[ -n "$DIABOX" ] && LBLV+="|DIABOX=$DIABOX|";
+[ -n "$DTITLE" ] && LBLV+="DTITLE=$DTITLE|";
 [ -n "$BTITLE" ] && LBLV+="\n|BTITLE=$BTITLE|";
 [ -n "$BTLYS$BTLNO$BTLOK$BTLCL$BTLXT$BTLHL" ] && LBL+="\n";
 [ -n "$BTLYS" ] && LBLV+="|BTLYS=$BTLYS|";
@@ -376,7 +382,6 @@ function _adbman_dialog(){
 		[ "${TB[0]}" -gt "$WDTH" ] && WDTH=${TB[0]};
 		unset TB;
 	fi;
-
 	# Create DIALOG command array
 	if [ -n "$DIABOX" ]; then
 		DIALOG=(dialog);
@@ -414,15 +419,21 @@ function _adbman_dialog(){
 			# --msgbox|--yesno|--textbox|--dselect
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH);
 		fi;
+		# Set DIALVL Menu path
+		local lvl=$(echo "$DIALVL" | sed -n "/$DIALID/s/>$DIALID.*/>$DIALID/p");
+		[ -n "$lvl" ] && DIALVL="$lvl" || DIALVL+=">$DIALID";
+		unset lvl;
 		# Execute dialog
 		while true; do
-			DIAOUT="$("${DIALOG[@]}" --max-input 8192 --output-fd 1)";
+			DIAOUT="$("${DIALOG[@]}" --output-fd 1)";
 			DIACODE=$?;
 			# Call Paralog with <ESC>
-			[ $PARALOG -eq 0 ] && break ||\ 
-			if [ $DIACODE -eq 255 ]; then
-				_adbman_paralog "$PARARGS"
-			fi
+			[ $PARALOG -eq 0 ] && break ||\
+				if [ $DIACODE -eq 255 ]; then
+					eval "$PARARGSET"; # Set PARARG
+					_adbman_paralog "${PARARG[@]}";
+				else break;
+				fi
 		done
 		# Set BTDEF pressed, DITAG choice, DINPUT user input
 		case $DIACODE in
@@ -882,7 +893,8 @@ function _adbman_appfilter_edit(){
 	eval "$CLEARDIAVARS"
 	local TMPFCD="$APPFCD" l='';
 	while true; do
-		DTITLE="Custom Filters"; DIABOX='--inputmenu';
+		DTITLE="Custom Filters";
+		DIABOX='--inputmenu'; DIALID='AppFilterEdit'
 		BTLXT='Edit'; BTLHL='Clear';
 		LABEL=""; #"Edit Custom Filters:"
 		eval "$APPFCDMENU";
@@ -912,12 +924,9 @@ function _adbman_appfilter_edit(){
 			;;
 		esac
 		eval "$SAVEDIASTATE";
-		[ $PARALOG -gt 0 ] && _adbman_paralog 'AppFilterEdit-Executed' 'APPFCD';
 	done
 	eval "$CLEARDIASTATE"
 	eval "$CLEARDIAVARS";
-	# echo "$CHECK"
-	# return $DIACODE
 }
 # _adbman_appfilter_edit
 
@@ -928,11 +937,11 @@ eval "$CLEARDIAVARS";
 # Save Custom filters in case of Cancel
 local TMPFSD="$APPFSD" TMPFCD="$APPFCD";
 while true; do
-	DTITLE="Filters"; DIABOX='--checklist'; BTLXT='Custom';
+	DTITLE="Filters";
+	DIABOX='--checklist'; DIALID='AppFilter'; BTLXT='Custom';
 	LABEL='Select Filters:';
 	MENU="$APPFSD$nln$APPFCD"
 	_adbman_dialog;
-	[ $PARALOG -gt 0 ] && _adbman_paralog 'AppFilterChecklist-Executed' 'APPFSD' 'APPFCD';
 	case $DIACODE in
 	0)#${DIALOG_OK-0})
 		MENU="$APPFSD"; eval "$SETCHECKLIST"; APPFSD="$MENU";
@@ -1074,9 +1083,9 @@ function _adbman_appinfo_dumpview(){
 		else DTITLE="Package Dump:${APPCHT}$APPNAME";
 	fi
 	if [ -f "$ADBMANP/$APPNAME" ]; then
-		DIABOX='--yesno'; BTLYS='View'; BTLNO='reDump'
+		DIABOX='--yesno'; DIALID='DumpSelect'
+		BTLYS='View'; BTLNO='reDump'
 		LABEL="Dump already exist:\n$ADBMANP/$APPNAME"
-		[ $PARALOG -gt 0 ] && _adbman_paralog 'App Dump - View existing';
 		_adbman_dialog
 		if [ $DIACODE -ne 0 ]; then
 			ADBOPT="rm $ADBMANP/$APPNAME"
@@ -1096,14 +1105,14 @@ function _adbman_appinfo_dumpview(){
 		_adbman_log "[$DIACODE]$ADBOUT"
 		DIACODE=$?
 		if [ $DIACODE -ne 0 ]; then
-			DIABOX='--msgbox'; LABEL='Dump error!'
+			DIABOX='--msgbox'; DIALID='Message'; LABEL='Dump error!'
 			_adbman_dialog
 		fi
 	else
-		DIABOX='--textbox';
+		DIABOX='--textbox'; DIALID='DumpView'
 		LABEL="$ADBMANP/$APPNAME";
 		_adbman_dialog;
-		DIABOX='--yesno'; BTDEF='cancel';
+		DIABOX='--yesno'; DIALID='Choice'; BTDEF='cancel';
 		LABEL="Remove file:\n$ADBMANP/$APPNAME"
 		_adbman_dialog
 		if [ $DIACODE -eq 0 ]; then
@@ -1113,7 +1122,7 @@ function _adbman_appinfo_dumpview(){
 			_adbman_log "[\$]$ADBOPT"
 			_adbman_log "[$DIACODE]$ADBOUT"
 			if [ $DIACODE -eq 0 ]; then
-				DIABOX='--msgbox'
+				DIABOX='--msgbox'; DIALID='Message';
 				LABEL="File removed:\n$ADBMANP/$APPNAME"
 				_adbman_dialog
 			fi
@@ -1151,7 +1160,6 @@ function _adbman_appinfo(){
 		sed -n 's/^\s*dataDir=\(\S*\)/\1/p')
 	APP_fla=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*flags=\[\s\(.*\)\s\]/\1/p' | sed 's/\s/,/g')
-	#';s/[\s*\|\s*]//p')
 	APP_enb=$(echo "$APPSTATS" |\
 		sed -n "/^\s*User $APPUSER/s/.*enabled=\(\S*\)\s.*/\1/p")
 	APP_hid=$(echo "$APPSTATS" |\
@@ -1194,9 +1202,9 @@ function _adbman_log(){
 }
 
 #»ADB EXEC
-#»Execute (multiline) command list stored in $ADBOPT string var
+#»Execute (multiline) command list stored in ADBOPT string var
 # Logs history to $ADBMANP/$ADBMANL
-# Echoes list of command stdouts, call: LABEL="$(_adbman_exec)"
+# Echoes list of command stdouts, use: LABEL="$(_adbman_exec)"
 # Returns error code stored in $DIACODE
 function _adbman_exec(){
 	eval "$CLEARDIAVARS";
@@ -1235,12 +1243,15 @@ function _adbman_exec(){
 #»Call: _adbman_dselect '/path/to/dir'
 function _adbman_dselect(){
 eval "$CLEARDIAVARS";
-DTITLE='Choose Directory'; DIABOX='--dselect'; LABEL="$1";
-HGHT=30; WDTH=50;
-_adbman_dialog 'noWH'
+DTITLE='Choose Directory'; 
+DIABOX='--dselect'; DIALID='DirSelect' LABEL="$1";
+# HGHT=30; WDTH=50;
+_adbman_dialog
 if [ ! -d "$DINPUT" ]; then
-	LABEL="Create Directory:\n$DINPUT" DIABOX='--yesno';
-	_adbman_dialog; DINPUT="$DIAOUT";
+	DIABOX='--yesno'; DIALID='DirCreate'
+	LABEL="Create Directory:\n$DINPUT"
+	_adbman_dialog;
+	DINPUT="$DIAOUT";
 	if [ $DIACODE -eq 0 ]; then
 		DIAOUT=$(mkdir "$DINPUT" 2>&1);
 		if [ $? -eq 0 ]; then
@@ -1248,7 +1259,7 @@ if [ ! -d "$DINPUT" ]; then
 		else
 			LABEL="Error:\n$DIAOUT";
 		fi
-		DIABOX='--msgbox';
+		DIABOX='--msgbox'; DIALID='Message'
 		_adbman_dialog
 	fi
 fi
@@ -1261,14 +1272,14 @@ echo "$DINPUT";
 function _adbman_appback_options(){
 	while true; do
 		eval "$CLEARDIAVARS";
-		DTITLE="Backup Options"; DIABOX='--checklist';
+		DTITLE="Backup Options";
+		DIABOX='--checklist'; DIALID='BackupOptions'
 		LABEL="Directory:$ADBMANA\nFile Name:$ADBMANF"
 		BTDEF='ok'; BTLXT='Dir/File';
 		# Remove short options (:apk:) from APPFBD for MENU
 		MENU="$APPFBD" && MENU="$(echo "$MENU" |\
 			sed -n 's/^\(.\):\S\+:\(.*\)$/\1:\2/p')"
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
-		[ $PARALOG -gt 0 ] && _adbman_paralog 'AppBackupOptions-Executed';
 		case $DIACODE in
 		0)#OK
 			MENU="$APPFBD"; eval "$SETCHECKLIST"; APPFBD="$MENU";
@@ -1283,9 +1294,8 @@ function _adbman_appback_options(){
 				DTITLE="Backup Directory and File Name"
 				BTDEF='cancel'; BTLXT='Edit'; BTLHL='Reset';
 				MENU="Directory:$ADBMANB${nln}File-Name:$ADBMANF"
-				DIABOX='--inputmenu';
+				DIABOX='--inputmenu'; DIALID='BackupDir'
 				eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
-				[ $PARALOG -gt 0 ] && _adbman_paralog 'AppBackupOptionsDir/File-Executed';
 				case $DIACODE in
 				0)#OK
 					eval "$SETADBMANA";
@@ -1322,7 +1332,6 @@ function _adbman_appback_options(){
 			;;
 		esac
 	done
-	eval "$CLEARDIAVARS";
 	eval "$CLEARDIASTATE";
 }
 
@@ -1340,7 +1349,8 @@ function _adbman_appback_menu(){
 # restore FILE   restore device contents from FILE
 	while true; do
 		eval "$CLEARDIAVARS";
-		DTITLE="App Backup and Restore"; DIABOX='--menu';
+		DTITLE="App Backup and Restore";
+		DIABOX='--menu'; DIALID='AppBackup'
 		MENU="$APPBOD"; BTDEF='ok'; BTLXT='Options';
 		eval "$SETLABELAPP"
 		LABEL="$LABEL\nDirectory:$ADBMANA\nFile Name:$ADBMANF"
@@ -1348,7 +1358,6 @@ function _adbman_appback_menu(){
 		eval "$SETAPPOBL" && APPOBL=$(sed '$d' <<<"$APPOBL")
 		LABEL="$LABEL\nOptions: ${APPOBL//$'\n'/'  '}"
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
-		[ $PARALOG -gt 0 ] && _adbman_paralog 'AppBackupMenu-Executed';
 		case $DIACODE in
 		0)#Backup/Restore
 			# Prepare backup arguments per user options
@@ -1364,15 +1373,15 @@ function _adbman_appback_menu(){
 			# ADBOPT="${ADBOPT//'-storage<'/'S<'}"
 			# Confirm Dialog
 			eval "$CLEARDIAVARS"
-			DTITLE="App Backup and Restore"; DIABOX='--yesno';
+			DTITLE="App Backup and Restore";
+			DIABOX='--yesno'; DIALID='AppBackup'
 			eval "$SETLABELAPP"
 			LABEL="$LABEL\nDirectory:$ADBMANA"
 			LABEL="$LABEL\n\nBackup:"
 			LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
 			eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
-			[ $PARALOG -gt 0 ] && _adbman_paralog 'AppBackupMenu-BackupConfirm';
 			if [ $DIACODE -eq 0 ]; then
-				DIABOX='--msgbox'; BTDEF='cancel'
+				DIABOX='--msgbox'; DIALID='Message';
 				LABEL=$(_adbman_exec "$APPNAME" "$ADBOPT")
 				DIACODE=$?
 				eval "$SETDIAMSGBOX"
@@ -1408,20 +1417,19 @@ function _adbman_appperms_menu(){
 	NONPERMS=$(echo "$APPPERMS" | sed 's/on$/off/');
 	while true; do
 		DTITLE="App Permissions [${APP_prn}]"
-		DIABOX='--checklist'; BTLCL='Back';
+		DIABOX='--checklist'; DIALID='AppPerms'; BTLCL='Back';
 		eval "$SETLABELAPP"; # LABEL=[sys|user]<package>
 		LABEL="$LABEL\n${APPOPL//$'\n'/'  '}";
 		MENU="$APPPERMS"; # Create checklist MENU
 		_adbman_dialog;
-		[ $PARALOG -gt 0 ] && _adbman_paralog 'AppPermissins-Executed'
 		case $DIACODE in
 		0)#${DIALOG_OK-0})
 			eval "$CLEARDIABTTN"; ADBOPT='';
-			DTITLE='Modify App Permissions'; DIABOX='--yesno';
+			DTITLE='Modify App Permissions';
+			DIABOX='--yesno'; DIALID='Confirm'
 			# Create list of permissions to modify
 			MENU=$(echo "$APP_prm" | sed 's/:.*;/:/');
 			eval "$RETCHECKLIST";
-			[ $PARALOG -gt 0 ] && _adbman_paralog "$DTITLE"
 			# If any permission on list: YESNO DIALOG
 			if [ -n "$MENU" ]; then
 				ADBOPT="$(echo "$MENU" |\
@@ -1446,7 +1454,7 @@ function _adbman_appperms_menu(){
 					eval "$SETLABELAPP"
 					LABEL="$LABEL\n\nPermissions:"
 					LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}";
-					DIABOX='--msgbox';
+					DIABOX='--msgbox'; DIALID='Message';
 					_adbman_dialog;
 				fi;
 				# After Execution
@@ -1497,7 +1505,7 @@ if [ -n "$ADBOPT" ]; then
 	# Execute ADBOPT and display output msgbox
 	if [ $DIACODE -eq 0 ]; then
 		ADBOPT="adb shell pm $ADBOPT $APPNAME"
-		MENU=''; DIABOX='--msgbox';
+		MENU=''; DIABOX='--msgbox'; DIALID='Message'
 		eval "$SETLABELAPP"
 		LABEL="$LABEL\n$(_adbman_exec)"
 		APPIX=$?
@@ -1518,7 +1526,8 @@ function _adbman_appinfo_menu(){
 		# Refresh APPINFO only if APPIX changed and reset APPIX
 		if [ $APPIX -eq 1 ]; then
 		_tifu _adbman_appinfo; APPIX=0; fi;
-		DTITLE="Application Menu [User:$APPUSER]"; DIABOX='--menu'; BTLCL='Back'
+		DTITLE="Application Menu [User:$APPUSER]"
+		DIABOX='--menu'; DIALID='AppInfo'; BTLCL='Back'
 		eval "$APPMLDLABEL"; # LABEL for App Menu
 		eval "$APPMLDMENU"; # MENU from APPMLD
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
@@ -1532,8 +1541,8 @@ function _adbman_appinfo_menu(){
 			"B")#Backup / Restore App
 				_adbman_appback_menu;;
 			"C")#Clear App Data
-				DIABOX='--yesno';
-				DTITLE='Clear App Data';
+				DIABOX='--yesno'; DTITLE='Clear App Data';
+				DIALID=$(echo "$DTITLE" | sed 's/\s.*//')
 				_adbman_appmod;;
 			"D")#Dump:App dump view
 				_adbman_appinfo_dumpview;;
@@ -1541,21 +1550,25 @@ function _adbman_appinfo_menu(){
 				DIABOX='--menu';
 				[ ${APP_enb} -le 1 ] &&\
 					DTITLE='Disable App' || DTITLE='Enable App';
+				DIALID=$(echo "$DTITLE" | sed 's/\s.*//')
 				_adbman_appmod;;
 			"F")#Suspend/Unsuspend package
 				DIABOX='--yesno';
-				[ "${APP_sus}" == "true" ] &&\
+				[ ${APP_sus} -eq 1 ] &&\
 					DTITLE='Unsuspend App' || DTITLE='Suspend App';
+				DIALID=$(echo "$DTITLE" | sed 's/\s.*//')
 				_adbman_appmod;;
 			"H")#Hide/Unhide package
 				DIABOX='--yesno';
-				[ "${APP_hid}" == "true" ] &&\
+				[ ${APP_hid} -eq 1 ] &&\
 					DTITLE='Unhide App [root]' || DTITLE='Hide App [root]';
+				DIALID=$(echo "$DTITLE" | sed 's/\s.*//')
 				_adbman_appmod;;
 			"I")#Install/Uninstall package
 				DIABOX='--menu';
-				[ "${APP_ins}" == "true" ] &&\
+				[ ${APP_ins} -eq 1 ] &&\
 					DTITLE='Uninstall App' || DTITLE='Install App';
+				DIALID=$(echo "$DTITLE" | sed 's/\s.*//')
 				_adbman_appmod;;
 			"P")#App Permissions
 				[ -n "$APPPERMS" ] &&\
@@ -1568,8 +1581,6 @@ function _adbman_appinfo_menu(){
 			esac;;
 		3)#${DIALOG_EXTRA-3})
 			break;;
-		# 255)#Esc-to-Paralog
-		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPSTATS' 'APPACTTS';;
 		*)#Cancel
 			break;;
 		esac
@@ -1597,7 +1608,8 @@ function _adbman_applist_menu(){
 		eval "$CLEARDIAVARS";
 		_tifu _adbman_applist "${SORT[$s]}"
 		DTITLE="Application List [User:$APPUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
-		DIABOX='--menu'; BTLXT='Filter'; BTLCL='Back';
+		DIABOX='--menu'; DIALID='AppList';
+		BTLXT='Filter'; BTLCL='Back';
 		# WDTH=-1; HGHT=-1;
 		BTLHL="${SORT[$(($s+1))]}";
 		MENU="$APPLFD"
@@ -1626,9 +1638,6 @@ function _adbman_applist_menu(){
 		3)#${DIALOG_EXTRA-3})
 			_adbman_appfilter_checklist;
 			;;
-		# 255)#Esc-to-Paralog
-		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
-		# 	;;
 		*)#Cancel
 			break;
 			;;
@@ -1641,7 +1650,8 @@ function _adbman_applist_menu(){
 #»ADBman options
 function _adbman_options(){
 	eval "$CLEARDIAVARS";
-	DTITLE='ADBman Options'; DIABOX='--menu';
+	DTITLE='ADBman Options';
+	DIABOX='--menu'; DIALID='Options';
 	MENU="$MANOPT"
 	while true; do
 		_adbman_dialog
@@ -1649,9 +1659,6 @@ function _adbman_options(){
 		0)#OK
 			break
 			;;
-		# 255)#Esc-to-Paralog
-		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" "$ADBMANC";
-		# 	;;
 		*)#CANCEL
 			break
 			;;
@@ -1665,7 +1672,8 @@ function _adbman_user(){
 	APPLX=0;
 	eval "$CLEARDIAVARS";
 	DTITLE="User List [User:$APPUSER]"
-	DIABOX='--radiolist'; BTLCL='Back'; APPLX=0;
+	DIABOX='--radiolist'; DIALID='User';
+	BTLCL='Back'; APPLX=0;
 	eval "$MANUSRMENU" # Create MENU from MANUSR
 	LABEL="\ZuChoose User\Zn:"
 	while true; do
@@ -1677,9 +1685,6 @@ function _adbman_user(){
 				APPUSER=$DIAOUT;
 			fi
 			;;
-		# 255)#Esc-to-Paralog
-		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE" 'APPLX' 'APPIX' 'PKGDUMP';
-		# 	;;
 		*)#Cancel
 			break
 			;;
@@ -1709,12 +1714,14 @@ fi
 #»MAIN MENU
 #»Main Menu Dialog
 function _adbman_main_menu(){
+	# set +xv
 	while true; do
 		eval "$CLEARDIAVARS";
 		BTITLE="ADBman - ADB Manager";
-		DTITLE="ADBman Menu"; DIABOX='--menu';
-		LABEL="Select Option:"
+		DTITLE="ADBman Menu";
+		DIABOX='--menu'; DIALID='Main';
 		BTDEF='ok' BTLCL='Exit';
+		LABEL="Select Option:"
 		eval "$MANMLDMENU"; # Create MENU from MANMLD
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE"
 		case $DIACODE in
@@ -1729,9 +1736,11 @@ function _adbman_main_menu(){
 				eval "$CLEARDIAVARS";
 				DTITLE='History Log';
 				if [ -f "$ADBMANL" ]; then
-					DIABOX='--textbox';	LABEL="$ADBMANL";
+					DIABOX='--textbox'; DIALID='HistoryLog';
+					LABEL="$ADBMANL";
 				else
-					DIABOX='--msgbox'; LABEL='No history found.';
+					DIABOX='--msgbox'; DIALID='Message';
+					LABEL='No history found.';
 				fi
 				_adbman_dialog;
 				;;
@@ -1757,14 +1766,12 @@ function _adbman_main_menu(){
 			;;
 		3)#${DIALOG_EXTRA-3})
 			;;
-		# 255)#Esc-to-Paralog
-		# 	[ $PARALOG -eq 0 ] && break || _adbman_paralog "$DTITLE"
-		# 	;;
 		*)#Cancel
 			_adbman_exit;
 			;;
 		esac
 	done
+	# set -xv
 }
 _adbman_main_menu
 
