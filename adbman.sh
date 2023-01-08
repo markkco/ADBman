@@ -92,16 +92,12 @@ function _tifu(){
 }
 
 #»FILE LIST
-#»List files in folder recursively: flist "/path/to"
-function flist(){
-	if [ -d "$1" ]; then
-		for i in "$1"/*; do
-			[ -d "$i" ] && flist "$i" ||\
-			[ -f "$i" ] && echo "$i";
-		done;
-	else [ -f "$1" ] &&	echo "$1" ||\
-			return 1;
-  fi;
+#»List (only) files recursively: _adbman_flist "/path/to/dir"
+function _adbman_flist(){
+	[ -d "$1" ] && for y in "$1"/*; do
+		if [ -d "$y" ]; then _adbman_flist "$y";
+		else [ -f "$y" ] && echo "$y"; fi;
+	done || return 1;
 }
 
 #»DIALOG VARS
@@ -471,9 +467,11 @@ function _adbman_dialog(){
 				DITAG="${DIAOUT#* }" ||	DITAG="$DIAOUT";
 			;;
 		'--checklist')
+			# DITAG for checklist returns list
 			[ "${DIAOUT%% *}" == "HELP" ] &&\
 				DITAG="${DIAOUT#* }" ||	DITAG=" $DIAOUT ";
-			# DITAG for checklist returns list
+			# If list is empty set DITAG to ''
+			[ -z "$(echo "$DITAG" | sed 's/\s*//g')" ] && DITAG='';
 			# Use: eval "$RETCHECKLIST" to extract list to MENU
 			;;
 		'--radiolist')
@@ -641,10 +639,10 @@ l=$(sed -n "/^${i}:/s/:on\$\|:off\$//p" <<<"$APPFCD");
 MENU=$(sed "/^\$/d" <<<"$MENU")'
 #»APP Filter Backup Dialog Checklist
 APPFBD=\
-'A:apk:Backup or Restore .apk files:on
-B:obb:Backup or Restore .obb files:on
-C:storage:Backup or Restore shared storage:on
-D:subdir:Backup to package subdirectory:off
+'A:apk:Backup .apk files:on
+B:obb:Backup .obb files:on
+C:storage:Backup shared storage:on
+D:subdir:Backup to <package> subdirectory:on
 E:split:Backup each option separately:off
 S:system:Include system apps:off'
 APPOBL="" #_Options Backup Label
@@ -668,11 +666,11 @@ APPOPL="\Z4${PRMCHD}\Zn:Declared
 \Z2${PRMCHI}\Zn:Installed
 \Z5${PRMCHN}\Zn:Runtime
 \Z1${PRMCHR}\Zn:Restricted"
-#»Set ADBMANA='$ADBMANB/ || $ADBMANB/<package>/' from APPFBD
+#»Set ADBMANA='$ADBMANB || $ADBMANB/<package>' from APPFBD
 SETADBMANA=\
 '[ -n "$(sed -n "/^D:.*:on$/p" <<<"$APPFBD")" ] &&\
-ADBMANA="$ADBMANB/<package>/" ||\
-ADBMANA="$ADBMANB/"';
+ADBMANA="$ADBMANB/<package>" ||\
+ADBMANA="$ADBMANB"';
 }
 _tifu _adbman_menuvars
 # echo "$(date +'[%T:%N]')>_adbman_menuvars"
@@ -754,30 +752,27 @@ _tifu _adbman_dumppackages
 #»APP FILTER READ
 #»Reads filters from config file
 function _adbman_config_read(){
-	[ $DEBUG -gt 0 ] && set -xv
 	local OPS OPT
 	if [ -f "$ADBMANC" ]; then
-	OPT='filterstatus'
-	OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
-	[ -n "$OPS" ] && APPFSD="${OPS//';'/$'\n'}"
-	APPFSN=$(sed '$=;d' <<<"$APPFSD");
-	OPT='filtercustom'
-	OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
-	[ -n "$OPS" ] && APPFCD="${OPS//';'/$'\n'}"
-	APPFCN=$(sed '$=;d' <<<"$APPFCD");
-	OPT='filterbackup'
-	OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
-	[ -n "$OPS" ] && APPFBD="${OPS//';'/$'\n'}"
-	OPT='backupdir'
-	OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
-	[ -n "$OPS" ] && ADBMANB="$OPS"
-	OPT='backupfile'
-	OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
-	[ -n "$OPS" ] && ADBMANF="$OPS"
+		OPT='filterstatus'
+		OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
+		[ -n "$OPS" ] && APPFSD="${OPS//';'/$'\n'}"
+		APPFSN=$(sed '$=;d' <<<"$APPFSD");
+		OPT='filtercustom'
+		OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
+		[ -n "$OPS" ] && APPFCD="${OPS//';'/$'\n'}"
+		APPFCN=$(sed '$=;d' <<<"$APPFCD");
+		OPT='filterbackup'
+		OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
+		[ -n "$OPS" ] && APPFBD="${OPS//';'/$'\n'}"
+		OPT='backupdir'
+		OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
+		[ -n "$OPS" ] && ADBMANB="$OPS"
+		OPT='backupfile'
+		OPS="$(sed -n "s|^$OPT≈\(.*\)$|\1|p" "$ADBMANC")"
+		[ -n "$OPS" ] && ADBMANF="$OPS"
 	fi
 	eval "$SETADBMANA"
-	# [ $PARALOG -gt 0 ] && _adbman_paralog 'Read Config' "$ADBMANC";
-	[ $DEBUG -gt 0 ] && set +xv
 	unset OPS OPT;
 }
 _tifu _adbman_config_read
@@ -891,7 +886,7 @@ function _adbman_applist(){
 	-e 's/^\([0-9]\{5,\}\):/\1/' \
 	-e 's/^\([0-9]\{4\}\):/ \1/' \
 	-e 's/^\([0-9]\{,3\}\):/  \1/' |\
-	sed '=;s/^/:/' | sed '$!N;s/\n//')" # Add line numbers '#:'
+	sed '=;s/^/:/' | sed '$!N;s/\n//')"; # Add line numbers '#:'
 	# sed "s/:\[SYSTEM,.*\]:/\t$APPCHS/" |\
 	# sed "s/:\[.*\]:/\t$APPCHT/" |\
 	# sed "s/installed=0:enabled=./$APPCHU/" |\
@@ -985,6 +980,64 @@ while true; do
 done;
 unset TMPFSD TMPFCD;
 eval "$CLEARDIAVARS";
+}
+
+#»APP DUMP VIEW
+#»App dump export and viewer
+function _adbman_appinfo_dumpview(){
+	eval "$CLEARDIAVARS";
+	if [ "${APP_sys}" == "SYSTEM" ];
+		then DTITLE="Package Dump:${APPCHS}$APPNAME";
+		else DTITLE="Package Dump:${APPCHT}$APPNAME";
+	fi
+	if [ -f "$ADBMANP/$APPNAME" ]; then
+		DIABOX='--yesno'; DIALID='DumpSelect'
+		BTLYS='View'; BTLNO='reDump'
+		LABEL="Dump already exist:\n$ADBMANP/$APPNAME"
+		_adbman_dialog
+		if [ $DIACODE -ne 0 ]; then
+			ADBOPT="rm $ADBMANP/$APPNAME"
+			ADBOUT="$($ADBOPT 2>&1)";
+			DIACODE=$?;
+			_adbman_log "[\$]$ADBOPT"
+			_adbman_log "[$DIACODE]$ADBOUT"
+		fi
+	fi
+	BTLYS=''; BTLNO='';
+	while true; do
+	if [ ! -f "$ADBMANP/$APPNAME" ]; then
+		ADBOPT="adb shell pm dump $APPNAME >$ADBMANP/$APPNAME"
+		eval "$ADBOPT"
+		DIACODE=$?;
+		_adbman_log "[\$]$ADBOPT"
+		_adbman_log "[$DIACODE]$ADBOUT"
+		DIACODE=$?
+		if [ $DIACODE -ne 0 ]; then
+			DIABOX='--msgbox'; DIALID='Message'; LABEL='Dump error!'
+			_adbman_dialog
+		fi
+	else
+		DIABOX='--textbox'; DIALID='DumpView'
+		LABEL="$ADBMANP/$APPNAME";
+		_adbman_dialog;
+		DIABOX='--yesno'; DIALID='Choice'; BTDEF='cancel';
+		LABEL="Remove file:\n$ADBMANP/$APPNAME"
+		_adbman_dialog
+		if [ $DIACODE -eq 0 ]; then
+			ADBOPT="rm $ADBMANP/$APPNAME"
+			ADBOUT="$($ADBOPT 2>&1)";
+			DIACODE=$?;
+			_adbman_log "[\$]$ADBOPT"
+			_adbman_log "[$DIACODE]$ADBOUT"
+			if [ $DIACODE -eq 0 ]; then
+				DIABOX='--msgbox'; DIALID='Message';
+				LABEL="File removed:\n$ADBMANP/$APPNAME"
+				_adbman_dialog
+			fi
+		fi
+		break;
+	fi
+	done
 }
 
 #»APP SIZE
@@ -1091,67 +1144,12 @@ function _adbman_appinfo_perms(){
 	unset PDC PRQ PIN PRT;
 }
 
-#»APP DUMP VIEW
-#»App dump export and viewer
-function _adbman_appinfo_dumpview(){
-	eval "$CLEARDIAVARS";
-	if [ "${APP_sys}" == "SYSTEM" ];
-		then DTITLE="Package Dump:${APPCHS}$APPNAME";
-		else DTITLE="Package Dump:${APPCHT}$APPNAME";
-	fi
-	if [ -f "$ADBMANP/$APPNAME" ]; then
-		DIABOX='--yesno'; DIALID='DumpSelect'
-		BTLYS='View'; BTLNO='reDump'
-		LABEL="Dump already exist:\n$ADBMANP/$APPNAME"
-		_adbman_dialog
-		if [ $DIACODE -ne 0 ]; then
-			ADBOPT="rm $ADBMANP/$APPNAME"
-			ADBOUT="$($ADBOPT 2>&1)";
-			DIACODE=$?;
-			_adbman_log "[\$]$ADBOPT"
-			_adbman_log "[$DIACODE]$ADBOUT"
-		fi
-	fi
-	BTLYS=''; BTLNO='';
-	while true; do
-	if [ ! -f "$ADBMANP/$APPNAME" ]; then
-		ADBOPT="adb shell pm dump $APPNAME >$ADBMANP/$APPNAME"
-		eval "$ADBOPT"
-		DIACODE=$?;
-		_adbman_log "[\$]$ADBOPT"
-		_adbman_log "[$DIACODE]$ADBOUT"
-		DIACODE=$?
-		if [ $DIACODE -ne 0 ]; then
-			DIABOX='--msgbox'; DIALID='Message'; LABEL='Dump error!'
-			_adbman_dialog
-		fi
-	else
-		DIABOX='--textbox'; DIALID='DumpView'
-		LABEL="$ADBMANP/$APPNAME";
-		_adbman_dialog;
-		DIABOX='--yesno'; DIALID='Choice'; BTDEF='cancel';
-		LABEL="Remove file:\n$ADBMANP/$APPNAME"
-		_adbman_dialog
-		if [ $DIACODE -eq 0 ]; then
-			ADBOPT="rm $ADBMANP/$APPNAME"
-			ADBOUT="$($ADBOPT 2>&1)";
-			DIACODE=$?;
-			_adbman_log "[\$]$ADBOPT"
-			_adbman_log "[$DIACODE]$ADBOUT"
-			if [ $DIACODE -eq 0 ]; then
-				DIABOX='--msgbox'; DIALID='Message';
-				LABEL="File removed:\n$ADBMANP/$APPNAME"
-				_adbman_dialog
-			fi
-		fi
-		break;
-	fi
-	done
-}
-
 #»APP INFO
 #»Create App info from dump
 function _adbman_appinfo(){
+	# Get backups from backup folder ADBMANA
+	APP_bak="$(_adbman_flist "$ADBMANB" |\
+		sed -n "/$APPNAME[^\\.].*.adb$/p")"
 	# Dump Package
 	[ -z "$APPNAME" ] && echo "APPNAME empty!" && exit 1;
 	APPSTATS="$(adb shell pm dump $APPNAME |\
@@ -1191,19 +1189,19 @@ function _adbman_appinfo(){
 		sed -n 's/^\s*versionName=\(.*\)/\1/p')
 	APP_sys=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*pkgFlags.*\(SYSTEM\).*$/\1/p')
-	_tifu _adbman_appinfo_perms;
-	_tifu _adbman_appinfo_size;
+	_tifu _adbman_appinfo_perms; # Get permissions
+	_tifu _adbman_appinfo_size; # Get storage size
 }
 
 #»SIZE FORMAT
 #»Format data size to B/MB/GB
 function _adbman_sizeformat(){
 	if [ $1 -gt 999999999 ]; then
-	bc <<<"scale=2; $1 / 1000000000" | sed 's/$/GB/';
+		bc <<<"scale=2; $1 / 1000000000" | sed 's/$/GB/';
 	elif [ $1 -gt 999999 ]; then
-	bc <<<"scale=2; $1 / 1000000" | sed 's/$/MB/';
+		bc <<<"scale=2; $1 / 1000000" | sed 's/$/MB/';
 	elif [ $1 -gt 999 ]; then
-	bc <<<"scale=2; $1 / 1000" | sed 's/$/kB/';
+		bc <<<"scale=2; $1 / 1000" | sed 's/$/kB/';
 	else echo "$1B";
 	fi
 }
@@ -1291,7 +1289,7 @@ function _adbman_appback_options(){
 		eval "$CLEARDIAVARS";
 		DTITLE="Backup Options";
 		DIABOX='--checklist'; DIALID='BackupOptions'
-		LABEL="Directory:$ADBMANA\nFile Name:$ADBMANF"
+		LABEL="Directory:$ADBMANA/\nFile Name:$ADBMANF"
 		BTDEF='ok'; BTLXT='Dir/File';
 		# Remove short options (:apk:) from APPFBD for MENU
 		MENU="$APPFBD" && MENU="$(echo "$MENU" |\
@@ -1368,15 +1366,15 @@ function _adbman_appback_menu(){
 		eval "$CLEARDIAVARS";
 		DTITLE="App Backup & Restore";
 		DIABOX='--menu'; DIALID='AppBackup'
-		MENU="$APPBOD"; BTDEF='ok'; BTLXT='Options';
+		MENU="$APPBOD"; BTLXT='Options'; BTLCL='Back'
 		eval "$SETLABELAPP"
-		LABEL="$LABEL\nDirectory:$ADBMANA\nFile Name:$ADBMANF"
+		LABEL="$LABEL\nDirectory:$ADBMANA/\nFile Name:$ADBMANF"
 		# Refresh Option list, remove last 'include system'
 		eval "$SETAPPOBL" && APPOBL=$(sed '$d' <<<"$APPOBL")
 		LABEL="$LABEL\nOptions: ${APPOBL//$'\n'/'  '}"
 		_adbman_dialog;
 		case $DIACODE in
-		0)#Backup/Restore
+		0)#Backup&Restore
 			case "$DITAG" in
 			1)#Backup
 				eval "$CLEARDIAVARS"
@@ -1390,26 +1388,70 @@ function _adbman_appback_menu(){
 						sed 's/\(-\S\+\)/adb backup \1 -f <file>\1.adb <package>/')";
 				# Set <package> and <time>
 				ADBOPT="$(echo "$ADBOPT" |\
-					sed "s+<file>+$ADBMANA$ADBMANF+g" |\
+					sed "s+<file>+$ADBMANA/$ADBMANF+g" |\
 					sed "s/<time>/$(date +'%Y%m%d%H%M')/g" |\
 					sed "s+<package>+$APPNAME+g")"
 				# Add Create Folder to ADBOPT command list
-				[ ! -d "$ADBMANA" ] && ADBOPT="mkdir ${ADBMANA::-1}${nln}$ADBOPT"
+				[ ! -d "${ADBMANA//<package>/$APPNAME}" ] && ADBOPT="mkdir ${ADBMANA//<package>/$APPNAME}${nln}${ADBOPT}"
 				# Confirm Dialog
 				DTITLE="App Backup";
 				eval "$SETLABELAPP"
-				LABEL="$LABEL\nDirectory:$ADBMANA"
+				LABEL="$LABEL\nDirectory:$ADBMANA/"
 				LABEL="$LABEL\n\nBackup:"
 				LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
 				DIABOX='--yesno'; DIALID='Confirm'; _adbman_dialog;
 				if [ $DIACODE -eq 0 ]; then
+					eval "$SETLABELAPP"
+					LABEL="$LABEL\nDirectory:$ADBMANA/"
+					LABEL="$LABEL\n\nPress OK to start.\nNow unlock your device and confirm the backup operation..."
+					DIABOX='--msgbox'; DIALID='Message'; _adbman_dialog;
 					LABEL="$(_adbman_exec)"
 					DIACODE=$?
 					DIABOX='--msgbox'; DIALID='Message'; _adbman_dialog;
 				fi
 				;;
 			2)#Restore
-				;;
+				while true; do
+					eval "$CLEARDIAVARS"
+					DTITLE="App Restore"; BTLCL='Back'; BTLXT='Options';
+					eval "$SETLABELAPP"
+					LABEL="$LABEL\nDirectory:$ADBMANB/"
+					LABEL="$LABEL\nSelect backup(s) to restore:"
+					MENU="$(echo "$APP_bak" |\
+						sed "s+$ADBMANB+.+" |\
+						sed 's/$/:off/;=;s/^/:/' |\
+						sed '$!N;s/\n//')";
+					eval "$SETCHECKLIST"; # Convert MENU list to checklist
+					DIABOX='--checklist'; DIALID='Restore'; _adbman_dialog;
+					case $DIACODE in
+					0)#OK
+						BTLXT='';
+						LABEL="$(echo "${LABEL//'\n'/$'\n'}" | sed '$d')"; LABEL="${LABEL//$'\n'/'\n'}"
+						if [ -n "$DITAG" ]; then
+							eval "$RETCHECKLIST"; # Get selected Backups as MENU list 
+							ADBOPT="$(echo "$MENU" |\
+								sed "s![0-9]\\+:.!adb restore $ADBMANB/!g;s/:on$//g")"
+							LABEL="$LABEL\n\nRestore:"
+							LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
+							DIABOX='--yesno'; DIALID='Confirm'; _adbman_dialog;
+							if [ $DIACODE -eq 0 ]; then
+								LABEL="$(_adbman_exec)"
+								DIACODE=$?
+								DIABOX='--msgbox'; DIALID='Message'; _adbman_dialog;
+							fi
+						else
+							LABEL="$LABEL\n\nNothing selected."
+							DIABOX='--msgbox'; DIALID='Message'; _adbman_dialog;
+						fi
+						;;
+					3)#Options
+						# No subshell!
+						_adbman_appback_options
+						;;
+					*)#Cancel
+						break;;
+					esac
+				done;;
 			esac
 			;;
 		3)#Options
