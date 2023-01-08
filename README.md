@@ -15,20 +15,18 @@ Created in `termux` self-debug environment.
 ## FEATURES
 * App list with filtering options
 * Manage single app:
-    * backup
+    * backup/restore
+    * clear data
+    * dump view
     * install-existing/uninstall
     * enable/disable
-    * suspend/unsuspend
     * hide/unhide [root]
+    * suspend/unsuspend
     * manage runtime permissions
-    * clear data
-    * backup/restore
-    * view dump
 * History log
 * Script config in ~/.adbman
 
 ## TODO
-* Finish app restore
 * Add adb log view
 * Add adb settings
 
