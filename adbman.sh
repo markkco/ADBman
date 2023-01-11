@@ -50,8 +50,12 @@ _adbman_check $@
 
 #»ICONS & CHARS
 function _adbman_icons(){
+# Chars: MENU field Separator(chs), Column(chc), Newline(nln), Tab(tab)
+chs='§' 
+chc='¶'
 nln='
 '; tab='	'
+# Icons:
 #■□▢▣▤▥▦▧▨▩
 #∎⧈⧇⧆⊟⧄⧅⟎⟏⌧⍰⍯⌷⎕⌸⌹⌺⌻⌼☑☒☐⍇⍗⍄⍃⍈⍐⍍⍔☐⚿⌷⌸⍌⍓⍞⍠⍯⍰
 #⬤⊙⦾⊛⊝⊘⦸⦶⦷⊗⦹⦺⦻⦼⦿⧀⧁᮰⍟⨀⨁⨂⌽⌾
@@ -149,32 +153,32 @@ if [ -n "$l" ]; then dialog \
 DINPUTOK=2;
 else DINPUTOK=1; fi;
 else DINPUTOK=0; fi;'
-#»Switch ':on|:off' checklist MENU per DITAG
+#»Switch 'on|off' checklist MENU per DITAG
 SETCHECKLIST=\
 '[ -z "$MENU" ] &&\
 echo "SETCHECKLIST error: empty MENU list!" && exit 1;
 SIZE=$(sed -n "\$=;d" <<<"$MENU");
 for ((i=1;i<=$SIZE;i++)); do \
 j=$(echo "$MENU" |\
-sed -n "${i}s/^\([0-9A-Z]\+\):*.*/\1/p");
+sed -n "${i}s/^\([0-9A-Z]\+\)${chs}.*/\1/p");
 [ -z "$j" ] && j="$i";
 j=$(sed -n "/ $j /p" <<<"$DITAG");
 [ -n "$j" ] &&\
-MENU=$(sed "${i}s/:off$/:on/" <<<"$MENU") ||\
-MENU=$(sed "${i}s/:on$/:off/" <<<"$MENU");	done;'
-#»Switch ':on|:off' checklist MENU, remove unchanged
+MENU=$(sed "${i}s/${chs}off$/${chs}on/" <<<"$MENU") ||\
+MENU=$(sed "${i}s/${chs}on$/${chs}off/" <<<"$MENU");	done;'
+#»Switch 'on|off' checklist MENU, remove unchanged
 RETCHECKLIST=\
 '[ -z "$MENU" ] &&\
 echo "RETCHECKLIST error: empty MENU list!" && exit 1;
 SIZE=$(sed -n "\$=;d" <<<"$MENU"); l="";
 for ((i=1;i<=$SIZE;i++)); do \
 j=$(echo "$MENU" |\
-sed -n "${i}s/^\([0-9A-Z]\+\):*.*/\1/p");
+sed -n "${i}s/^\([0-9A-Z]\+\)${chs}.*/\1/p");
 [ -z "$j" ] && j="$i";
 j=$(sed -n "/ $j /p" <<<"$DITAG");
 [ -n "$j" ] &&\
-l+="$(sed -n "${i}s/:off$/:on/p" <<<"$MENU")$nln" ||\
-l+="$(sed -n "${i}s/:on$/:off/p" <<<"$MENU")$nln"; done;
+l+="$(sed -n "${i}s/${chs}off$/${chs}on/p" <<<"$MENU")$nln" ||\
+l+="$(sed -n "${i}s/${chs}on$/${chs}off/p" <<<"$MENU")$nln"; done;
 [ -n "$l" ] && MENU=$(sed "/^\$/d" <<<"$l") || MENU="";'
 #»Set LABEL='Package:[sys|user]<package>'
 SETLABELAPP=\
@@ -185,14 +189,14 @@ LABEL="Package:${APPCHT}$APPNAME";'
 #»Save (DTITLE, BTDEF, DITAG) to DIASTATE (Trim:' [*' from DTITLE)
 SAVEDIASTATE=\
 'DIASTATE=$(sed "/${DTITLE%% [*}/d" <<<"$DIASTATE");
-DIASTATE+="${nln}DTITLE=${DTITLE%% [*}:BTDEF=$BTDEF=BTDEF:DITAG=$DITAG=DITAG:";
+DIASTATE+="${nln}DTITLE=${DTITLE%% [*}${chs}BTDEF=$BTDEF=BTDEF${chs}DITAG=$DITAG=DITAG${chs}";
 DIASTATE=$(sed "/^\$/d" <<<"$DIASTATE")'
 #»Load DIALOG state (DTITLE, BTDEF, DITAG) from DIASTATE
 LOADDIASTATE=\
 'BTDEF=$(echo "$DIASTATE" |\
-sed -n "/${DTITLE%% [*}/s/.*:BTDEF=\(.*\)=BTDEF:.*/\1/p");
+sed -n "/${DTITLE%% [*}/s/.*${chs}BTDEF=\(.*\)=BTDEF${chs}.*/\1/p");
 DITAG=$(echo "$DIASTATE" |\
-sed -n "/${DTITLE%% [*}/s/.*:DITAG=\(.*\)=DITAG:.*/\1/p");'
+sed -n "/${DTITLE%% [*}/s/.*${chs}DITAG=\(.*\)=DITAG${chs}.*/\1/p");'
 #»Clear current DIALOG state (DTITLE, BTDEF, DITAG) from DIASTATE
 CLEARDIASTATE=\
 'DIASTATE=$(echo "$DIASTATE" | sed -n "/${DTITLE%% [*}/d");'
@@ -200,7 +204,7 @@ CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; DIALID=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
 BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";
 LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
-CLEARDIABTTN='BTDEF=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL=""'
+CLEARDIABTTN='BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL=""'
 #»Set Custom Parameters per MenuID DIALID to ParaLog argument PARARG
 PARARGSET='PARARG=("$DTITLE");
 [ "$DIALID" == "AppInfo" ] && PARARG+=("APPSTATS" "APPACTTS");
@@ -224,7 +228,7 @@ function _adbman_tb(){
 		l=$(echo "$1" |\
 			sed -e 's/\\Z.//g' -e 's/	/        /g');
 		# Remove 'DITAG:'; k='' if not MENU
-		k=$(echo "$l" | sed -n 's/^[0-9]\+:\|^[A-Z]://p');
+		k=$(echo "$l" | sed -n "s/^[0-9]\+${chs}\|^[A-Z]${chs}//p");
 		# Reduce WIDTHMIN - (#DITAG) - (#'  ') if MENU
 		[ -n "$k" ] && l="$k" && ((i=$i-${#j}-2));
 		# Reduce WIDTHMIN - border width
@@ -277,7 +281,7 @@ LBLV="|DIALID=$DIALID|DIALVL=$DIALVL|\n";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
 [ -n "$DITAG" ] && LBLV+="|DITAG=$DITAG|";
 [ -n "$DINPUT" ] && LBLV+="|DINPUT=$DINPUT|";
-[ -n "$APPUSER" ] && LBLV+="\n|APPUSER=$APPUSER|";
+[ -n "$DEVUSER" ] && LBLV+="\n|DEVUSER=$DEVUSER|";
 [ -n "$APPNAME" ] && LBLV+="|APPNAME=$APPNAME||APPIX=$APPIX||APPLX=$APPLX|";
 [ -n "$DIASTATE" ] &&\
 	LBLV+="\n\Zu|DIASTATE|\Zn\n${DIASTATE//$'\n'/'\n'}\n——————————";
@@ -422,7 +426,7 @@ function _adbman_dialog(){
 			[ "$DIABOX" == "--radiolist" ] ||\
 			[ "$DIABOX" == "--inputmenu" ]; then
 			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH $SIZE);
-			readarray -t DIALIST <<<"${MENU//':'/$'\n'}";
+			readarray -t DIALIST <<<"${MENU//$chs/$'\n'}";
 			DIALOG+=("${DIALIST[@]}");
 		else
 			# --msgbox|--yesno|--textbox|--dselect
@@ -505,46 +509,46 @@ _tifu _adbman_userdata
 function _adbman_menuvars(){
 #»Options Menu List Dialog
 MANOPT=\
-'1:Config Directory
-2:Paralog'
+"1${chs}Config Directory
+2${chs}Paralog"
 #»Users Menu List Dialog
 MANUSR="$(adb shell pm list users |\
 	sed -n 's/.*{\(.*\)}.*/\1/p' |\
-	sed 's/:/ [/2;s/$/]:off/')"
-#»Parafunc: set APPUSER to 'on' in MENU
-MANUSRMENU='MENU=$(echo "$MANUSR" | sed "/^$APPUSER/s/:off/:on/")'
+	sed "s/:/ [/2;s/$/]${chs}off/;s/:/${chs}/g")"
+#»Parafunc: set DEVUSER to 'on' in MENU
+MANUSRMENU='MENU=$(echo "$MANUSR" | sed "/^$DEVUSER/s/${chs}off/${chs}on/")'
 #»Main Menu List Dialog
 MANMLD=\
-'A:Applications [APPLTN]
-B:Backup and Restore
-H:History Log
-L:Log
-O:Options
-P:Permissions
-S:Settings
-T:Tasks
-U:User [APPUSER]'
+"A${chs}Applications [APPLTN]
+B${chs}Backup and Restore
+H${chs}History Log
+L${chs}Log
+O${chs}Options
+P${chs}Permissions
+S${chs}Settings
+T${chs}Tasks
+U${chs}User [DEVUSER]"
 #»Parafunc: set App Count and active user in MANMLD
-MANMLDMENU='MENU=$(echo "$MANMLD" | sed "s/APPLTN/$APPLTN/;s/APPUSER/$APPUSER/")'
+MANMLDMENU='MENU=$(echo "$MANMLD" | sed "s/APPLTN/$APPLTN/;s/DEVUSER/$DEVUSER/")'
 #_App List Filtered Dialog; Total/Filtered Number
 APPLFD=''; APPLTN=0; APPLFN=0;
 #»App Menu List Dialog
 APPMLD=\
-'A:Activities
-B:Backup/Restore
-C:Clear Data
-D:Dump App
-E:EnableDisable
-F:SuspendUnsuspend
-H:HideUnhide [root]
-I:InstallUninstall
-P:Permissions [<prn>]
-S:Force Stop
-U:User [APPUSER]'
+"A${chs}Activities
+B${chs}Backup & Restore
+C${chs}Clear Data
+D${chs}Dump App
+E${chs}EnableDisable
+F${chs}SuspendUnsuspend
+H${chs}HideUnhide [root]
+I${chs}InstallUninstall
+P${chs}Permissions [<prn>]
+S${chs}Force Stop
+U${chs}User [DEVUSER]"
 #»Parafunc: Modify App Menu List Dialog per App status
 APPMLDMENU=\
 'MENU="$APPMLD";
-MENU=$(sed "s/APPUSER/$APPUSER/" <<<"$MENU");
+MENU=$(sed "s/DEVUSER/$DEVUSER/" <<<"$MENU");
 if [ ${APP_ins} -eq 1 ]; then\
 	MENU=$(sed "s+Install++" <<<"$MENU"); 
 	[ ${APP_enb} -le 1 ] &&\
@@ -588,79 +592,79 @@ LABEL="$LABEL Cache($(_adbman_sizeformat ${APP_stc})),";
 LABEL="$LABEL ∑($(_adbman_sizeformat ${APP_stt}))";'
 #»Parafunc: Set ADBOPT per App Menu List Dialog selected Option in DITAG
 APPMLDOPT=\
-'[ "$DITAG" == "C" ] && ADBOPT="clear --user $APPUSER";
+'[ "$DITAG" == "C" ] && ADBOPT="clear --user $DEVUSER";
 if [ "$DITAG" == "E" ]; then [ ${APP_enb} -le 1 ] &&\
 	ADBOPT=\
-"1:Disable (disable --user $APPUSER) [root]
-2:Disable (disable-user --user $APPUSER)
-3:Disable (disable-until-used --user $APPUSER)" ||\
+"1${chs}Disable (disable --user $DEVUSER) [root]
+2${chs}Disable (disable-user --user $DEVUSER)
+3${chs}Disable (disable-until-used --user $DEVUSER)" ||\
 	ADBOPT=\
-"1:Enable (default-state --user $APPUSER)
-2:Enable (enable --user $APPUSER)"; fi;
+"1${chs}Enable (default-state --user $DEVUSER)
+2${chs}Enable (enable --user $DEVUSER)"; fi;
 if [ "$DITAG" == "F" ]; then [ ${APP_sus} -eq 1 ] &&\
-	ADBOPT="unsuspend --user $APPUSER" ||\
-	ADBOPT="suspend --user $APPUSER"; fi;
+	ADBOPT="unsuspend --user $DEVUSER" ||\
+	ADBOPT="suspend --user $DEVUSER"; fi;
 if [ "$DITAG" == "H" ]; then [ ${APP_hid} -eq 1 ] &&\
-	ADBOPT="unhide --user $APPUSER" ||\
-	ADBOPT="hide --user $APPUSER"; fi;
+	ADBOPT="unhide --user $DEVUSER" ||\
+	ADBOPT="hide --user $DEVUSER"; fi;
 if [ "$DITAG" == "I" ]; then [ ${APP_ins} -eq 1 ] &&\
 	ADBOPT=\
-"1:Uninstall and keep data (uninstall -k --user $APPUSER)
-2:Uninstall and remove data (uninstall --user $APPUSER)
-3:Uninstall and keep data (uninstall -k)
-4:Uninstall and remove data (uninstall)" ||\
-	ADBOPT="install-existing --user $APPUSER"; fi'
+"1${chs}Uninstall and keep data (uninstall -k --user $DEVUSER)
+2${chs}Uninstall and remove data (uninstall --user $DEVUSER)
+3${chs}Uninstall and keep data (uninstall -k)
+4${chs}Uninstall and remove data (uninstall)" ||\
+	ADBOPT="install-existing --user $DEVUSER"; fi'
 #»App Backup Options Dialog
 APPBOD=\
-'1:Backup
-2:Restore'
+"1${chs}Backup
+2${chs}Restore"
 #»APP Filter Status Dialog Checklist
 APPFSD=\
-'D:Disabled:on
-E:Enabled:on
-F:Suspended:on
-H:Hidden:on
-U:Uninstalled:on
-S:System:on
-T:ThirdParty:on
-0:Custom:on'
+"D${chs}Disabled${chs}on
+E${chs}Enabled${chs}on
+F${chs}Suspended${chs}on
+H${chs}Hidden${chs}on
+U${chs}Uninstalled${chs}on
+S${chs}System${chs}on
+T${chs}ThirdParty${chs}on
+0${chs}Custom${chs}on"
 # APP Filter Status Count
 APPFSN=$(sed '$=;d' <<<"$APPFSD");
 #»APP Filter Custom Dialog List
 APPFCD=\
-'1:android:on
-2:google:on'
+"1${chs}android${chs}on
+2${chs}google${chs}on"
 # APP Filter Custom Count
 APPFCN=$(sed '$=;d' <<<"$APPFCD");
 APPFCDMENU='MENU="";
 for i in {1..9}; do \
-l=$(sed -n "/^${i}:/s/:on\$\|:off\$//p" <<<"$APPFCD");
-[ -n "$l" ] && MENU+="$l$nln" || MENU+="$i:$nln"; done;
+l=$(sed -n "/^${i}${chs}/s/${chs}on\$\|${chs}off\$//p" <<<"$APPFCD");
+[ -n "$l" ] && MENU+="$l$nln" || MENU+="$i${chs}$nln"; done;
 MENU=$(sed "/^\$/d" <<<"$MENU")'
 #»APP Filter Backup Dialog Checklist
 APPFBD=\
-'A:apk:Backup .apk files:on
-B:obb:Backup .obb files:on
-C:storage:Backup shared storage:on
-D:subdir:Backup to <package> subdirectory:on
-E:split:Backup each option separately:off
-S:system:Include system apps:off'
+"A${chs}apk${chs}Backup .apk files${chs}on
+B${chs}obb${chs}Backup .obb files${chs}on
+C${chs}storage${chs}Backup shared storage${chs}on
+D${chs}subdir${chs}Backup to <package> subdirectory${chs}on
+E${chs}split${chs}Backup each option separately${chs}off
+S${chs}system${chs}Include system apps${chs}off"
 APPOBL="" #_Options Backup Label
 SETAPPOBL='APPOBL=$(echo "$APPFBD" |\
-sed "s/^.://;s/:.*:/:/;s/on$/$APPCH1/;s/off$/$APPCH0/")'
+sed "s/^.${chs}//;s/${chs}.*${chs}/${chs}/;s/${chs}on$/:$APPCH1/;s/${chs}off$/:$APPCH0/")'
 APPOCL="" #_Options Custom Label
 SETAPPOCL='APPOCL=$(echo "$APPFCD" |\
-sed "s/^.://;s/on$/$APPCH1/;s/off$/$APPCH0/")'
+sed "s/^.${chs}//;s/${chs}on$/:$APPCH1/;s/${chs}off$/:$APPCH0/")'
 APPOSL="" #_Options Status Label
 SETAPPOSL='APPOSL=$(echo "$APPFSD" | sed "\$d" |\
-sed "s/^D:/$APPCHD/" |\
-sed "s/^E:/   $APPCHE/" |\
-sed "s/^F:/$APPCHF/" |\
-sed "s/^H:/$APPCHH/" |\
-sed "s/^U:/\\\n$APPCHU/" |\
-sed "s/^S:/$APPCHS/" |\
-sed "s/^T:/ $APPCHT/" |\
-sed "s/on$/$APPCH1  /;s/off$/$APPCH0  /")'
+sed "s/^D${chs}/$APPCHD/" |\
+sed "s/^E${chs}/   $APPCHE/" |\
+sed "s/^F${chs}/$APPCHF/" |\
+sed "s/^H${chs}/$APPCHH/" |\
+sed "s/^U${chs}/\\\n$APPCHU/" |\
+sed "s/^S${chs}/$APPCHS/" |\
+sed "s/^T${chs}/ $APPCHT/" |\
+sed "s/${chs}on$/:$APPCH1  /;s/${chs}off$/:$APPCH0  /")'
 APPOPL="" #_Options Permission Label
 APPOPL="\Z4${PRMCHD}\Zn:Declared
 \Z2${PRMCHI}\Zn:Installed
@@ -668,7 +672,7 @@ APPOPL="\Z4${PRMCHD}\Zn:Declared
 \Z1${PRMCHR}\Zn:Restricted"
 #»Set ADBMANA='$ADBMANB || $ADBMANB/<package>' from APPFBD
 SETADBMANA=\
-'[ -n "$(sed -n "/^D:.*:on$/p" <<<"$APPFBD")" ] &&\
+'[ -n "$(sed -n "/^D${chs}.*${chs}on$/p" <<<"$APPFBD")" ] &&\
 ADBMANA="$ADBMANB/<package>" ||\
 ADBMANA="$ADBMANB"';
 }
@@ -678,7 +682,9 @@ _tifu _adbman_menuvars
 #»DATA VARS
 function _adbman_datavars(){
 #»User
-APPUSER=0; APPUSER=$(echo "$MANUSR" | sed -n '/^0\|Owner/s/:.*:.*$//p')
+DEVUSER=0; DEVUSER=$(echo "$MANUSR" | sed -n "/^0\\|Owner/s/${chs}.*${chs}.*$//p")
+#»Device Settings: Global; Secure; System
+DEVSGLO=''; DEVSSEC=''; DEVSSYS=''
 #»Packages dump; custom Package List
 PKGDUMP=''; PKGLIST='';
 #»App Name; Dump Package status; Dump Package Activities
@@ -707,10 +713,6 @@ APP_sta=0;  # Package apk Size
 APP_stc=0;  # Package cache Size
 APP_std=0;  # Package data Size
 APP_stt=0;  # Package total Size
-#»Include parameters in Paralog per dialog menu
-# PARARGS="$(\
-# case $DCURRENT in\
-# esac)"
 }
 _tifu _adbman_datavars
 # echo "$(date +'[%T:%N]')>_adbman_datavars"
@@ -721,7 +723,7 @@ function _adbman_dumppackages(){
 	PKGDUMP=$(adb shell pm dump 0 |\
 	sed -n '/^Packages/,/^Queries/p' |\
 	sed '1d;$d;/^$/d;s/^\s\+/;/g' |\
-	sed "/^;User/{/User $APPUSER.*/!d}" |\
+	sed "/^;User/{/User $DEVUSER.*/!d}" |\
 	sed '/^;Package\|^;userId=\|^;pkg=\|^;codePath=\|^;dataDir=\|^;pkgFlags=\|^;User/!d' |\
 	sed 's/;Package\s\[\(\S\+\)\]/\1/g' |\
 	sed 's/Package{\(\S\+\)\s\S\+}/\1/g' |\
@@ -749,8 +751,8 @@ function _adbman_dumppackages(){
 }
 _tifu _adbman_dumppackages
 
-#»APP FILTER READ
-#»Reads filters from config file
+#»ADBMAN CONFIG READ
+#»Reads user variables from config file
 function _adbman_config_read(){
 	local OPS OPT
 	if [ -f "$ADBMANC" ]; then
@@ -777,34 +779,30 @@ function _adbman_config_read(){
 }
 _tifu _adbman_config_read
 
-#»APP FILTER WRITE
+#»ADBMAN CONFIG WRITE
 #»Saves filters to config file
 function _adbman_config_write(){
-	[ $DEBUG -gt 0 ] && set -xv
 	local OPC OPS OPT
 	OPC='if [ -n "$(sed -n "/^$OPT≈/p" "$ADBMANC")" ];
 then sed -i "s|^$OPT≈.*$|$OPT≈$OPS|" "$ADBMANC";
 else echo "$OPT≈$OPS" >>"$ADBMANC"; fi'
 	if [ -f "$ADBMANC" ]; then
-	OPT='filterstatus'
-	OPS="${APPFSD//$'\n'/';'}"
-	eval "$OPC"
-	OPT='filtercustom'
-	OPS="${APPFCD//$'\n'/';'}"
-	eval "$OPC"
-	OPT='filterbackup'
-	OPS="${APPFBD//$'\n'/';'}"
-	eval "$OPC"
-	OPT='backupdir'
-	OPS="$ADBMANB"
-	eval "$OPC"
-	OPT='backupfile'
-	OPS="$ADBMANF"
-	eval "$OPC"
+		OPT='filterstatus'
+		OPS="${APPFSD//$'\n'/';'}"
+		eval "$OPC"
+		OPT='filtercustom'
+		OPS="${APPFCD//$'\n'/';'}"
+		eval "$OPC"
+		OPT='filterbackup'
+		OPS="${APPFBD//$'\n'/';'}"
+		eval "$OPC"
+		OPT='backupdir'
+		OPS="$ADBMANB"
+		eval "$OPC"
+		OPT='backupfile'
+		OPS="$ADBMANF"
+		eval "$OPC"
 	fi
-	# [ $PARALOG -gt 0 ] && _adbman_paralog 'Write Config' "$ADBMANC";
-	[ $DEBUG -gt 0 ] && set +xv
-	[ $CHECKER -gt 0 ] && exit
 	unset OPC OPS OPT;
 }
 # _adbman_config_write
@@ -814,41 +812,41 @@ else echo "$OPT≈$OPS" >>"$ADBMANC"; fi'
 function _adbman_appfilter(){
 	local INCL EXCL l;
 	# Filter Status
-	PKGLIST="$PKGDUMP"
-	[ $DEBUG -gt 0 ] && set -xv
-	[ -n "$(echo "$APPFSD" | sed -n '/D:\S\+:off/p')" ] &&\
+	PKGLIST="$PKGDUMP"; # Initialize filtered app list: PKGLIST
+	# Filter PKGLIST per APPFSD App Status 
+	[ -n "$(echo "$APPFSD" | sed -n "/D${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/installed=1.*enabled=[234]/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/E:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/E${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/installed=1.*enabled=[01]/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/F:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/F${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/suspended=1/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/H:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/H${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/hidden=1/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/U:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/U${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/installed=0/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/S:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/S${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/SYSTEM/!p')
-	[ -n "$(echo "$APPFSD" | sed -n '/T:\S\+:off/p')" ] &&\
+	[ -n "$(echo "$APPFSD" | sed -n "/T${chs}\S\+${chs}off/p")" ] &&\
 	PKGLIST=$(echo "$PKGLIST" | sed -n '/SYSTEM/p')
 	eval "$SETAPPOSL" # Update APPOSL Label
 	# Filter Custom
-	l=$(echo "$APPFCD" | sed '/.:""/d' | sed '$=;d');
-	if [ "${APPFSD:(-1)}" == "n" ] && [ "$l" -gt 0 ];
+	l=$(echo "$APPFCD" | sed '$=;d'); # Check number of custom filters
+	# Apply custom filters if last APPFSD option is o'n' and #(APPFCD)>0
+	if [ "${APPFSD:(-1)}" == "n" ] && [ $l -gt 0 ];
 	then
-	INCL=$(echo "$APPFCD" | sed -n 's/.:\(\S\+\):on/\1.*;(/p')
-	EXCL=$(echo "$APPFCD" | sed -n 's/.:\(\S\+\):off/\1.*;(/p')
-	INCL="${INCL//$'\n'/'\|'}"
-	EXCL="${EXCL//$'\n'/'\|'}"
-	[ -n "$EXCL" ] &&\
-		PKGLIST=$(echo "$PKGLIST" | sed -n "/$EXCL/!p");
-	[ -n "$INCL" ] &&\
-		PKGLIST=$(echo "$PKGLIST" | sed -n "/$INCL/p");
+		INCL=$(echo "$APPFCD" | sed -n "s/.${chs}\(\S\+\)${chs}on/\1.*;(/p")
+		EXCL=$(echo "$APPFCD" | sed -n "s/.${chs}\(\S\+\)${chs}off/\1.*;(/p")
+		INCL="${INCL//$'\n'/'\|'}"
+		EXCL="${EXCL//$'\n'/'\|'}"
+		[ -n "$EXCL" ] &&\
+			PKGLIST=$(echo "$PKGLIST" | sed -n "/$EXCL/!p");
+		[ -n "$INCL" ] &&\
+			PKGLIST=$(echo "$PKGLIST" | sed -n "/$INCL/p");
 	fi
 	PKGLIST=$(echo "$PKGLIST" | sort -t ';' -k1)
 	# Filtered App Count
 	APPLFN=$(sed '$=;d' <<<"$PKGLIST")
 	eval "$SETAPPOCL" # Update APPOCL Label
-	[ $DEBUG -gt 0 ] && set +xv
 	unset INCL EXCL l
 }
 _tifu _adbman_appfilter
@@ -886,16 +884,7 @@ function _adbman_applist(){
 	-e 's/^\([0-9]\{5,\}\):/\1/' \
 	-e 's/^\([0-9]\{4\}\):/ \1/' \
 	-e 's/^\([0-9]\{,3\}\):/  \1/' |\
-	sed '=;s/^/:/' | sed '$!N;s/\n//')"; # Add line numbers '#:'
-	# sed "s/:\[SYSTEM,.*\]:/\t$APPCHS/" |\
-	# sed "s/:\[.*\]:/\t$APPCHT/" |\
-	# sed "s/installed=0:enabled=./$APPCHU/" |\
-	# sed "s/installed=1:enabled=[01]/$APPCHE/" |\
-	# sed "s/installed=1:enabled=[234]/$APPCHD/" |\
-	# sed "s/:hidden=1/$APPCHH/g;s/:hidden=0/ /" |\
-	# sed "s/:suspended=1/$APPCHF/;s/:suspended=0/ /" |\
-	# sed 's/^\([0-9]\{5,\}\):/\1/;s/^\([0-9]\{4\}\):/ \1/;s/^\([0-9]\{,3\}\):/  \1/' |\
-	# sed '=;s/^/:/' | sed '$!N;s/\n//')" # Add line numbers '#:'
+	sed "=;s/^/${chs}/" | sed '$!N;s/\n//')"; # Add line numbers '#:'
 }
 # _tifu _adbman_applist
 
@@ -925,9 +914,9 @@ function _adbman_appfilter_edit(){
 				l=$(echo "$APPFCD" | sed -n "/^$DITAG/p");
 				[ -n "$l" ] &&\
 					APPFCD=$(echo "$APPFCD" |\
-						sed "s/^$DITAG:.*:\(.*\)\$/$DITAG:$DINPUT:\1/") ||\
-					APPFCD+="$nln$DITAG:$DINPUT:on";
-				APPFCD=$(echo "$APPFCD" | sort -n -t ':' -k1);
+						sed "s/^$DITAG${chs}.*${chs}\(.*\)\$/$DITAG${chs}$DINPUT${chs}\1/") ||\
+					APPFCD+="${nln}$DITAG${chs}$DINPUT${chs}on";
+				APPFCD=$(echo "$APPFCD" | sort -n -t "${chs}" -k1);
 			fi;
 			;;
 		*)#Back
@@ -1132,15 +1121,15 @@ function _adbman_appinfo_perms(){
 				-e "s/ins;/\\\Z2$PRMCHI\\\Zn/" \
 				-e "s/run;/\\\Z5$PRMCHN\\\Zn/" \
 				-e "s/R;/\\\Z1$PRMCHR\\\Zn/" \
-				-e 's/req;//' |\
-		sed '=;s/^/:/' | sed '$!N;s/\n//')" # line num '#:'
+				-e 's/req;//' \
+				-e "s/:/${chs}/g" |\
+		sed "s/^/${chs}/;=" | sed '$!N;s/\n//')"; # Number each line
 		# Permission count
 		APP_prn=$(echo "${APP_prm}" | sed -n '$=;d');
 	else
 		APPPERMS=""
 		APP_prn=0
 	fi
-	# [ $PARALOG -gt 0 ] && _adbman_paralog '_appinfo_perms' 'APPPERMS'
 	unset PDC PRQ PIN PRT;
 }
 
@@ -1176,13 +1165,13 @@ function _adbman_appinfo(){
 	APP_fla=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*flags=\[\s\(.*\)\s\]/\1/p' | sed 's/\s/,/g')
 	APP_enb=$(echo "$APPSTATS" |\
-		sed -n "/^\s*User $APPUSER/s/.*enabled=\(\S*\)\s.*/\1/p")
+		sed -n "/^\s*User $DEVUSER/s/.*enabled=\(\S*\)\s.*/\1/p")
 	APP_hid=$(echo "$APPSTATS" |\
-		sed -n "/^\s*User $APPUSER/s/.*hidden=\(\S*\)\s.*/\1/p")
+		sed -n "/^\s*User $DEVUSER/s/.*hidden=\(\S*\)\s.*/\1/p")
 	APP_ins=$(echo "$APPSTATS" |\
-		sed -n "/^\s*User $APPUSER/s/.*installed=\(\S*\)\s.*/\1/p")
+		sed -n "/^\s*User $DEVUSER/s/.*installed=\(\S*\)\s.*/\1/p")
 	APP_sus=$(echo "$APPSTATS" |\
-		sed -n "/^\s*User $APPUSER/s/.*suspended=\(\S*\)\s.*/\1/p")
+		sed -n "/^\s*User $DEVUSER/s/.*suspended=\(\S*\)\s.*/\1/p")
 	APP_gid=$(echo "$APPSTATS" |\
 		sed -n 's/^\s*gids=\s*\[\(.*\)\]/\1/p')
 	APP_ver=$(echo "$APPSTATS" |\
@@ -1282,7 +1271,7 @@ eval "$CLEARDIAVARS";
 echo "$DINPUT";
 }
 
-#»APP BACKUP
+#»APP BACKUP OPTIONS
 #»Backup and Restore Options
 function _adbman_appback_options(){
 	while true; do
@@ -1293,7 +1282,7 @@ function _adbman_appback_options(){
 		BTDEF='ok'; BTLXT='Dir/File';
 		# Remove short options (:apk:) from APPFBD for MENU
 		MENU="$APPFBD" && MENU="$(echo "$MENU" |\
-			sed -n 's/^\(.\):\S\+:\(.*\)$/\1:\2/p')"
+			sed -n "s/^\(.\)${chs}\S\+${chs}\(.*\)$/\1${chs}\2/p")"
 		eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
 		case $DIACODE in
 		0)#OK
@@ -1308,7 +1297,7 @@ function _adbman_appback_options(){
 				eval "$CLEARDIAVARS"
 				DTITLE="Backup Directory and File Name"
 				BTDEF='cancel'; BTLXT='Edit'; BTLHL='Reset';
-				MENU="Directory:$ADBMANB${nln}File-Name:$ADBMANF"
+				MENU="Directory${chs}$ADBMANB${nln}File-Name${chs}$ADBMANF"
 				DIABOX='--inputmenu'; DIALID='BackupDir'
 				eval "$LOADDIASTATE"; _adbman_dialog; eval "$SAVEDIASTATE";
 				case $DIACODE in
@@ -1380,9 +1369,9 @@ function _adbman_appback_menu(){
 				eval "$CLEARDIAVARS"
 				# Prepare backup arguments (first 3) per user options in APPFBD
 				ADBOPT="$(echo "$APPFBD" | sed -n '1,3p' |\
-					sed -n 's/.:\(\S\+\):.*:on/-\1/p')"
+					sed -n "s/.${chs}\(\S\+\)${chs}.*${chs}on/-\1/p")"
 				# If split option is off: all args on 1 line; else: each line)
-				[ -n "$(sed -n '/E:.*:off/p' <<<"$APPFBD")" ] &&\
+				[ -n "$(sed -n "/E${chs}.*${chs}off/p" <<<"$APPFBD")" ] &&\
 					ADBOPT="adb backup ${ADBOPT//$'\n'/' '} -f <file>${ADBOPT//$'\n'/}.adb <package>" ||\
 					ADBOPT="$(echo "$ADBOPT" |\
 						sed 's/\(-\S\+\)/adb backup \1 -f <file>\1.adb <package>/')";
@@ -1419,18 +1408,19 @@ function _adbman_appback_menu(){
 					LABEL="$LABEL\nSelect backup(s) to restore:"
 					MENU="$(echo "$APP_bak" |\
 						sed "s+$ADBMANB+.+" |\
-						sed 's/$/:off/;=;s/^/:/' |\
+						sed "s/$/${chs}off/;=;s/^/${chs}/" |\
 						sed '$!N;s/\n//')";
 					eval "$SETCHECKLIST"; # Convert MENU list to checklist
 					DIABOX='--checklist'; DIALID='Restore'; _adbman_dialog;
 					case $DIACODE in
 					0)#OK
 						BTLXT='';
-						LABEL="$(echo "${LABEL//'\n'/$'\n'}" | sed '$d')"; LABEL="${LABEL//$'\n'/'\n'}"
+						LABEL="$(echo "${LABEL//'\n'/$'\n'}" | sed '$d')";
+						LABEL="${LABEL//$'\n'/'\n'}"
 						if [ -n "$DITAG" ]; then
 							eval "$RETCHECKLIST"; # Get selected Backups as MENU list 
 							ADBOPT="$(echo "$MENU" |\
-								sed "s![0-9]\\+:.!adb restore $ADBMANB/!g;s/:on$//g")"
+								sed "s![0-9]\\+${chs}.!adb restore $ADBMANB/!g;s/${chs}on$//g")"
 							LABEL="$LABEL\n\nRestore:"
 							LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
 							DIABOX='--yesno'; DIALID='Confirm'; _adbman_dialog;
@@ -1494,13 +1484,13 @@ function _adbman_appperms_menu(){
 			DTITLE='Modify App Permissions';
 			DIABOX='--yesno'; DIALID='Confirm'
 			# Create list of permissions to modify
-			MENU=$(echo "$APP_prm" | sed 's/:.*;/:/');
+			MENU=$(echo "$APP_prm" | sed "s/:.*;/${chs}/");
 			eval "$RETCHECKLIST";
 			# If any permission on list: YESNO DIALOG
 			if [ -n "$MENU" ]; then
 				ADBOPT="$(echo "$MENU" |\
-				sed -e 's/^\(\S\+\):.*on$/grant <package> \1/' \
-						-e 's/^\(\S\+\):.*off$/revoke <package> \1/')"
+				sed -e "s/^\(\S\+\)${chs}.*on$/grant <package> \1/" \
+						-e "s/^\(\S\+\)${chs}.*off$/revoke <package> \1/")"
 				MENU='';
 				eval "$SETLABELAPP"
 				LABEL="$LABEL\n\nPermissions:"
@@ -1592,7 +1582,7 @@ function _adbman_appinfo_menu(){
 		# Refresh APPINFO only if APPIX changed and reset APPIX
 		if [ $APPIX -eq 1 ]; then
 		_tifu _adbman_appinfo; APPIX=0; fi;
-		DTITLE="Application Menu [User:$APPUSER]"
+		DTITLE="Application Menu [User:$DEVUSER]"
 		DIABOX='--menu'; DIALID='AppInfo'; BTLCL='Back'
 		eval "$APPMLDLABEL"; # LABEL for App Menu
 		eval "$APPMLDMENU"; # MENU from APPMLD
@@ -1673,7 +1663,7 @@ function _adbman_applist_menu(){
 	while true; do
 		eval "$CLEARDIAVARS";
 		_tifu _adbman_applist "${SORT[$s]}"
-		DTITLE="Application List [User:$APPUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
+		DTITLE="Application List [User:$DEVUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
 		DIABOX='--menu'; DIALID='AppList';
 		BTLXT='Filter'; BTLCL='Back';
 		# WDTH=-1; HGHT=-1;
@@ -1737,7 +1727,7 @@ function _adbman_options(){
 function _adbman_user(){
 	APPLX=0;
 	eval "$CLEARDIAVARS";
-	DTITLE="User List [User:$APPUSER]"
+	DTITLE="User List [User:$DEVUSER]"
 	DIABOX='--radiolist'; DIALID='User';
 	BTLCL='Back'; APPLX=0;
 	eval "$MANUSRMENU" # Create MENU from MANUSR
@@ -1746,9 +1736,9 @@ function _adbman_user(){
 		_adbman_dialog;
 		case $DIACODE in
 		0)#${DIALOG_OK-0})
-			if [ "$APPUSER" != "$DIAOUT" ]; then
+			if [ "$DEVUSER" != "$DIAOUT" ]; then
 				APPLX=1; APPIX=1;
-				APPUSER=$DIAOUT;
+				DEVUSER=$DIAOUT;
 			fi
 			;;
 		*)#Cancel
@@ -1780,7 +1770,6 @@ fi
 #»MAIN MENU
 #»Main Menu Dialog
 function _adbman_main_menu(){
-	# set +xv
 	while true; do
 		eval "$CLEARDIAVARS";
 		BTITLE="ADBman - ADB Manager";
@@ -1818,6 +1807,7 @@ function _adbman_main_menu(){
 			'P')#Permissions
 				;;
 			'S')#Settings
+				_adbman_settings_menu;
 				;;
 			'T')#Tasks
 				;;
@@ -1837,7 +1827,6 @@ function _adbman_main_menu(){
 			;;
 		esac
 	done
-	# set -xv
 }
 _adbman_main_menu
 
