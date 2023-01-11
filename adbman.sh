@@ -137,7 +137,7 @@ DIASTATE='';    # Saved Dialog options list, use:eval "$SAVEDIASTATE" | "$LOADDI
 DIALID='';      # Dialog Menu LEVEL ID (Main|Applist|Appinfo|Install|Confirm|Message|...)
 DIALVL='';      # Dialog Menu LEVEL (:Main:Applist:Appinfo:Install:Confirm:Message:)
 #»»»»»»»»»»»
-DIAOPT=("--no-shadow" "--colors");
+DIAOPT=("--no-shadow" "--colors" "--column-separator" "${chc}");
 }
 _tifu _adbman_diavars
 
@@ -204,11 +204,12 @@ CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; DIALID=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
 BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";
 LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
-CLEARDIABTTN='BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL=""'
+CLEARDIABTTN='BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";'
 #»Set Custom Parameters per MenuID DIALID to ParaLog argument PARARG
 PARARGSET='PARARG=("$DTITLE");
 [ "$DIALID" == "AppInfo" ] && PARARG+=("APPSTATS" "APPACTTS");
 [ "$DIALID" == "Options" ] && PARARG+=("$ADBMANC");
+[ "$DIALID" == "Settings" ] && PARARG+=("${!BTLIST[$LSTATE]}");
 [ "$DIALID" == "User" ] && PARARG+=("PKGDUMP");'
 }
 _tifu _adbman_diavarf
@@ -525,7 +526,7 @@ H${chs}History Log
 L${chs}Log
 O${chs}Options
 P${chs}Permissions
-S${chs}Settings
+S${chs}Settings [Demo]
 T${chs}Tasks
 U${chs}User [DEVUSER]"
 #»Parafunc: set App Count and active user in MANMLD
@@ -1716,6 +1717,101 @@ function _adbman_options(){
 			break
 			;;
 		*)#CANCEL
+			break
+			;;
+		esac
+	done
+}
+
+#»ADB SETTINGS MULTILINE PARSER
+#»Parse multiline to singleline settings
+function _adbman_settings_parse(){
+	local PARSEL='' PARSEF=''
+	PARSEF="$(echo "$1" | sed -n '/^"\|^\s\|^}\|^\]\|\[$\|{$\|"$/p')"
+	if [ -n "$PARSEF" ]; then
+		PARSEL="$(echo "$1" | sed -n '/^"\|^\s\|^}\|^\]\|\[$\|{$\|"$/!p')"
+		PARSEF="$(echo "$PARSEF" | sed '/^"$\|^}$\|^\]$/s/$/¶/')"
+		PARSEF="${PARSEF//$'\n'/}"
+		PARSEF="$(echo "${PARSEF//'¶'/$'\n'}" | sed 's/\s//g;/^\s*$/d')"
+		PARSEL="$(echo "$PARSEL${nln}$PARSEF" | LC_ALL=C sort)"
+		echo "$PARSEL"
+	else
+		echo "$1";
+	fi
+}
+
+#»ADB SETTINGS
+#»ADB Settings Menu Dialog
+function _adbman_settings_menu(){
+	eval "$CLEARDIAVARS"
+	APPSX=1;
+	local -a BTLIST=( 'GLOBAL' 'SECURE' 'SYSTEM' );
+	local -a STLIST=( 'DEVSGLO' 'DEVSSEC' 'DEVSSYS' );
+	local -i BSTATE=1 LSTATE=0
+	local CURSET='' CURVAL=''
+	local STATESW=\
+'((LSTATE++)); [ $LSTATE -eq 3 ] && LSTATE=0;
+((BSTATE++)); [ $BSTATE -eq 3 ] && BSTATE=0;'
+	while true; do
+		eval "$CLEARDIABTTN"
+		DTITLE="Device Settings [${BTLIST[$LSTATE]}] Demo"
+		DIABOX='--menu'; DIALID='AppSettings'; BTLCL='Back';
+		BTLXT="${BTLIST[$BSTATE]}";
+		LABEL="\Zu\Z1WARNING: Editing device settings can be dangerous!\Zn"
+		LABEL+="\n\Z3This is a work in progress. Only browsing is currently available. Changing is not available yet!\Zn"
+		if [ $APPSX -ne 0 ]; then
+			DEVSGLO="$(adb shell settings list --user $DEVUSER global)";
+			DEVSSEC="$(adb shell settings list --user $DEVUSER secure)";
+			DEVSSYS="$(adb shell settings list --user $DEVUSER system)";
+			APPSX=0;
+		fi
+		MENU="$(_adbman_settings_parse "${!STLIST[$LSTATE]}")"
+		MENU="$(echo "$MENU" |\
+			sed "s/^\([0-9A-Za-z_\.]\+\)=/\1${chc}/" |\
+			sed "s/^/${chs}/;=" | sed '$!N;s/\n//')"; # Number each line
+		_adbman_dialog;
+		case $DIACODE in
+		0)#${DIALOG_OK-0})
+			eval "$CLEARDIABTTN";
+			BTLXT='Edit'; BTLHL='Clear';
+			MENU="$(echo "$MENU" |\
+				sed -n "/^$DITAG${chs}/{s/^$DITAG${chs}//;s/${chc}/${chs}/;p}")"
+			CURSET="${MENU//$chs*/}"
+			CURVAL="${MENU//*$chs/}"
+			LABEL="$LABEL\n\nCurrent [${BTLIST[$LSTATE]}] setting:\n$CURSET=$CURVAL"
+			DINPUT="$CURVAL";
+			while true; do
+				DIABOX='--inputmenu'; DIALID='Edit'; _adbman_dialog;
+				case $DIACODE in
+				0)#OK
+					break
+					;;
+				2)#HELP:Clear
+					DINPUT="";
+					[ "$DINPUT" != "$CURVAL" ] && APPSX=1;
+					MENU="$DITAG${chs}$DINPUT"
+					;;
+				3)#EXTRA:Edit
+					[ "$DINPUT" != "$CURVAL" ] && APPSX=1;
+					MENU="$DITAG${chs}$DINPUT"
+					;;
+				*)#CANCEL
+					APPSX=0;
+					break;;
+				esac
+			done
+			if [ $APPSX -ne 0 ]; then
+			eval "$CLEARDIABTTN";
+				ADBOPT="adb shell settings put --user $DEVUSER ${BTLIST[$LSTATE]} $DITAG $DINPUT"
+				LABEL="$LABEL\n\nModify  [${BTLIST[$LSTATE]}] setting:\n$CURSET=$DINPUT"
+				LABEL="$LABEL\n\nExecute:\n>$ADBOPT"
+				DIABOX="--msgbox"; DIALID='Message'; _adbman_dialog;
+			fi
+			;;
+		3)#${DIALOG_EXTRA-3})
+			eval "$STATESW";
+			;;
+		*)#Cancel
 			break
 			;;
 		esac
