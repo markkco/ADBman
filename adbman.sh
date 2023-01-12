@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 set +H
 #»STARTUP CHECK
 function _adbman_check(){
@@ -107,7 +108,7 @@ function _adbman_flist(){
 #»DIALOG VARS
 #»Set Dialog Variables
 function _adbman_diavars(){
-#»dialog "${DIAOPT[@]}" "$DIABOX" "$LABEL" "$HGHT" "$WDTH"
+#»dialog "${DIAOPT[@]}" "$DIABOX" "$LABEL" "$DIAHIGT" "$DIAWIDT"
 DIABOX='';      # --menu|--checklist|--radiolist|--inputmenu|--textbox|--yesno|--msgbox
 DTITLE='';      # --title "$DTITLE"
 BTITLE='';      # --backtitle "$BTITLE"
@@ -121,9 +122,9 @@ BTDEF='';       # --default-button "$BTDEF" (ok|cancel|extra|help)
 DITAG='';       # --default-item "$DITAG"
 LABEL='';       # Dialog Label (text)
 MENU='';        # Menu/Checklist/InputMenu list: tag1:item1:..
-((HGHT=-2));    # Height of dialog box
-((WDTH=-2));    # Width of dialog box
-((SIZE=-2));    # Size of MENU (list-height|menu-height)
+((DIAHIGT=-2)); # Height of dialog box
+((DIAWIDT=-2)); # Width of dialog box
+((DIASIZE=-2)); # Size of MENU (list-height|menu-height)
 ((WIDTHMIN=50));# Minimum dialog width
 SORT=();        # Sort options array
 DIALIST=();     # Array of MENU elements
@@ -136,8 +137,10 @@ DINPUT='';      # Dialog InputMenu output: RENAMED $DITAG $DINPUT
 DIASTATE='';    # Saved Dialog options list, use:eval "$SAVEDIASTATE" | "$LOADDIASTATE"
 DIALID='';      # Dialog Menu LEVEL ID (Main|Applist|Appinfo|Install|Confirm|Message|...)
 DIALVL='';      # Dialog Menu LEVEL (:Main:Applist:Appinfo:Install:Confirm:Message:)
+DIASCR=();      # Dialog max screen size DIASCR[0]=height, DIASCR[1]=width
 #»»»»»»»»»»»
 DIAOPT=("--no-shadow" "--colors" "--column-separator" "${chc}");
+DIASCR=( $(stty size) )
 }
 _tifu _adbman_diavars
 
@@ -157,8 +160,8 @@ else DINPUTOK=0; fi;'
 SETCHECKLIST=\
 '[ -z "$MENU" ] &&\
 echo "SETCHECKLIST error: empty MENU list!" && exit 1;
-SIZE=$(sed -n "\$=;d" <<<"$MENU");
-for ((i=1;i<=$SIZE;i++)); do \
+DIASIZE=$(sed -n "\$=;d" <<<"$MENU");
+for ((i=1;i<=$DIASIZE;i++)); do \
 j=$(echo "$MENU" |\
 sed -n "${i}s/^\([0-9A-Z]\+\)${chs}.*/\1/p");
 [ -z "$j" ] && j="$i";
@@ -170,8 +173,8 @@ MENU=$(sed "${i}s/${chs}on$/${chs}off/" <<<"$MENU");	done;'
 RETCHECKLIST=\
 '[ -z "$MENU" ] &&\
 echo "RETCHECKLIST error: empty MENU list!" && exit 1;
-SIZE=$(sed -n "\$=;d" <<<"$MENU"); l="";
-for ((i=1;i<=$SIZE;i++)); do \
+DIASIZE=$(sed -n "\$=;d" <<<"$MENU"); l="";
+for ((i=1;i<=$DIASIZE;i++)); do \
 j=$(echo "$MENU" |\
 sed -n "${i}s/^\([0-9A-Z]\+\)${chs}.*/\1/p");
 [ -z "$j" ] && j="$i";
@@ -203,7 +206,7 @@ CLEARDIASTATE=\
 CLEARDIAVARS='DIALOG=(); DIALIST=(); DTITLE=""; DIALID=""; BTITLE="";
 DIABOX=""; DIAOUT=""; DIACODE=-2; DITAG=""; DINPUT=''; DINPUTOK=0;
 BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";
-LABEL=""; MENU=""; WDTH=-2; HGHT=-2; SIZE=-2;'
+LABEL=""; MENU=""; DIAWIDT=-2; DIAHIGT=-2; DIASIZE=-2;'
 CLEARDIABTTN='BTDEF=""; BTLYS=""; BTLNO=""; BTLOK=""; BTLCL=""; BTLXT=""; BTLHL="";'
 #»Set Custom Parameters per MenuID DIALID to ParaLog argument PARARG
 PARARGSET='PARARG=("$DTITLE");
@@ -216,42 +219,60 @@ _tifu _adbman_diavarf
 # echo "$(date +'[%T:%N]')>_adbman_dialogvars"
 
 #»TEXT BOUDARY
-#»Outputs "WDTH" "HGHT" of a multiline parameter
-#»WDTH=longest line; HGHT=number of lines
+#»Outputs "DIAWIDT" "DIAHIGT" of a multiline parameter
+#»DIAWIDT=longest line; DIAHIGT=number of lines
 function _adbman_tb(){
 	# $1=text, $2=border width, $3=border height
-	local i j k l;
+	local -i i=0; # Width: 50 || Actual || Screen
+	local -i j=0; # Width: Screen
+	local -i k=0; # Height
+	local l=''; # LABEL or MENU list
+	local m=''; # MENU list || empty if not MENU
+	local n=''; # LABEL or MENU list
+	local -i p=0; # Number of wrapped lines
 	# set -xv
 	if [ -n "$1" ]; then
-		((i=$WIDTHMIN)); #Width
-		j=$(echo "$1" | sed '$=;d'); #Height
+		((i=$WIDTHMIN)); #Width=50
+		((j=${DIASCR[1]})); #Width=Screen width
+		k=$(echo "$1" | sed '$=;d'); #Height
 		# Remove formatting; replace tab with spaces
-		l=$(echo "$1" |\
-			sed -e 's/\\Z.//g' -e 's/	/        /g');
-		# Remove 'DITAG:'; k='' if not MENU
-		k=$(echo "$l" | sed -n "s/^[0-9]\+${chs}\|^[A-Z]${chs}//p");
-		# Reduce WIDTHMIN - (#DITAG) - (#'  ') if MENU
-		[ -n "$k" ] && l="$k" && ((i=$i-${#j}-2));
-		# Reduce WIDTHMIN - border width
-		[ -n "$2" ] && [ $2 -gt 0 ] && ((i-=$2));
+		l=$(echo "$1" | sed -e 's/\\Z.//g' -e 's/	/        /g');
+		# Remove 'DITAG:'; m='' if not MENU
+		m=$(echo "$l" | sed -n "/${chs}/{s/^[0-9A-Z]${chs}//;p}");
+		# Reduce: Width - (#DITAG) - (#'  ') if MENU
+		[ -n "$m" ] && l="$m" && ((i=$i-${#k}-2)) && ((j=$j-${#k}-2));
+		# Reduce: Width - border width
+		[ -n "$2" ] && [ $2 -gt 0 ] && ((i-=$2)) && ((j-=$2));
 		# Print only lines longer than $i
-		l=$(echo "$l" | sed -n "/.\{$i,\}/p")
-		# Get longest line if $l not empty
+		l=$(echo "$l" | sed -n "/^.\{$i,\}/p")
 		if [ -n "$l" ]; then
-			# Mask lines with '1'; sort; last line is longest
-			l=$(echo "$l" |	sed 's/./1/g' | sort -n | sed -n '$p');
-			# The longest line length
-			[ -n "$l" ] && ((i=${#l}))
-			# Add back removed #DITAG+#(' ') width if MENU
-			[ -n "$k" ] && ((i=${#l}+${#j}+2));
-			# Add border width
-			[ -n "$2" ] && [ $2 -gt 0 ] && ((i+=$2));
+			# Print only lines longer than $j
+			n=$(echo "$l" | sed -n "/^.\{$j,\}/p")
+			if [ -n "$n" ]; then
+				# Calculate height of wrapped lines if not MENU
+				[ -z "$m" ] && while true; do
+					# Trim by Sreen width
+					n="$(echo "$n" | sed -n "s/^.\{,$j\}//;/^$/!p")";
+					[ -n "$n" ] && p=$(echo "$n" | sed '$=;d') || p=0;
+					[ $p -gt 0 ] && ((k+=$p)) || break; # Increase height
+				done
+				((i=${DIASCR[1]})); #Width=Screen width
+			else
+				# Mask lines with '1'; sort; last line is longest
+				l=$(echo "$l" | sed 's/./1/g' | sort -n | sed -n '$p');
+				# The longest line length
+				[ -n "$l" ] && ((i=${#l}))
+				# Add back removed #DITAG+#(' ') width if MENU
+				[ -n "$m" ] && ((i=${#l}+${#k}+2));
+				# Add border width
+				[ -n "$2" ] && [ $2 -gt 0 ] && ((i+=$2));
+			fi
 		else ((i=$WIDTHMIN));
 		fi;
-	else i=0; j=0;
+	else i=0; k=0;
 	fi;
-	[ -n "$3" ] && [ $3 -gt 0 ] && ((j+=$3))
-	echo "$i" "$j";
+	[ -n "$3" ] && [ $3 -gt 0 ] && ((k+=$3))
+	echo "$i" "$k";
 	# set +xv
 }
 
@@ -274,9 +295,9 @@ LBLV="|DIALID=$DIALID|DIALVL=$DIALVL|\n";
 [ -n "$BTLCL" ] && LBLV+="|BTLCL=$BTLCL|";
 [ -n "$BTLXT" ] && LBLV+="|BTLXT=$BTLXT|";
 [ -n "$BTLHL" ] && LBLV+="|BTLHL=$BTLHL|";
-[ "$WDTH" -ge -1 ] && LBLV+="\n|WDTH=$WDTH|";
-[ "$HGHT" -ge -1 ] && LBLV+="|HGHT=$HGHT|";
-[ "$SIZE" -ge -1 ] && LBLV+="|SIZE=$SIZE|";
+[ "$DIAWIDT" -ge -1 ] && LBLV+="\n|DIAWIDT=$DIAWIDT|";
+[ "$DIAHIGT" -ge -1 ] && LBLV+="|DIAHIGT=$DIAHIGT|";
+[ "$DIASIZE" -ge -1 ] && LBLV+="|DIASIZE=$DIASIZE|";
 [ "$DIACODE" -ge -1 ] && LBLV+="\n|DIACODE=$DIACODE|";
 [ -n "$BTDEF" ] && LBLV+="|BTDEF=$BTDEF|";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
@@ -375,25 +396,21 @@ unset MNU LBL LBLV LBLT TTL BXT PDW PDH DXC l;
 
 #»ADBman DIALOG
 #»Create Dialog from parameters
-#»_adbman_dialog ['noWH'] skips WDTH and HGHT calculation
+#»_adbman_dialog ['noWH'] skips DIAWIDT and DIAHIGT calculation
 function _adbman_dialog(){
-	# Calculate DIALOG LABEL/+MENU WDTH, HGHT, SIZE
+	# Calculate DIALOG LABEL/+MENU DIAWIDT, DIAHIGT, DIASIZE
 	TB=();
-	[ -n "$MENU" ] &&\
-		SIZE=$(sed "\$=;d" <<<"$MENU") || SIZE=0;
+	[ -n "$MENU" ] && DIASIZE=$(sed "\$=;d" <<<"$MENU") || ((DIASIZE=0));
 	if [ ! "$1" == "noWH" ]; then
-		[ "$DIABOX" == "--textbox" ] && TB=(-1 -1) ||\
-		TB=($(_adbman_tb "${LABEL//'\n'/$'\n'}" 5 5));
-		WDTH=${TB[0]}; HGHT=${TB[1]};
-		[ "$DIABOX" == "--menu" ] &&\
-			TB=($(_adbman_tb "$MENU" 6 2)) && ((HGHT+=${TB[1]}));
-		[ "$DIABOX" == "--checklist" ] &&\
-			TB=($(_adbman_tb "$MENU" 15 2)) && ((HGHT+=${TB[1]}));
-		[ "$DIABOX" == "--radiolist" ] &&\
-			TB=($(_adbman_tb "$MENU" 15 2)) && ((HGHT+=${TB[1]}));
-		[ "$DIABOX" == "--inputmenu" ] &&\
-			TB=($(_adbman_tb "$MENU" 15)) && ((HGHT+=${TB[1]}*3+2));
-		[ "${TB[0]}" -gt "$WDTH" ] && WDTH=${TB[0]};
+		[ "$DIABOX" == "--textbox" ] && TB=(-1 -1) || TB=($(_adbman_tb "${LABEL//'\n'/$'\n'}" 5 5));
+		((DIAWIDT=${TB[0]})); ((DIAHIGT=${TB[1]}));
+		[ "$DIABOX" == "--menu" ] && TB=($(_adbman_tb "$MENU" 6 2)) && ((DIAHIGT+=${TB[1]}));
+		[ "$DIABOX" == "--checklist" ] && TB=($(_adbman_tb "$MENU" 15 2)) && ((DIAHIGT+=${TB[1]}));
+		[ "$DIABOX" == "--radiolist" ] && TB=($(_adbman_tb "$MENU" 15 2)) && ((DIAHIGT+=${TB[1]}));
+		[ "$DIABOX" == "--inputmenu" ] && TB=($(_adbman_tb "$MENU" 15)) && ((DIAHIGT+=${TB[1]}*3+2));
+		[ "${TB[0]}" -gt "$DIAWIDT" ] && ((DIAWIDT=${TB[0]}));
+		[ "$DIAWIDT" -ge "${DIASCR[1]}" ] && ((DIAWIDT=-1));
+		[ "$DIAHIGT" -ge "${DIASCR[0]}" ] && ((DIAHIGT=-1));
 		unset TB;
 	fi;
 	# Create DIALOG command array
@@ -426,12 +443,13 @@ function _adbman_dialog(){
 			[ "$DIABOX" == "--checklist" ] ||\
 			[ "$DIABOX" == "--radiolist" ] ||\
 			[ "$DIABOX" == "--inputmenu" ]; then
-			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH $SIZE);
+			DIALOG+=("$DIABOX" "$LABEL" $DIAHIGT $DIAWIDT $DIASIZE);
 			readarray -t DIALIST <<<"${MENU//$chs/$'\n'}";
 			DIALOG+=("${DIALIST[@]}");
+			[ -z "$MENU" ] && echo -e "MENU list empty, cannot execute:\n${DIALOG[@]}" && exit 1
 		else
 			# --msgbox|--yesno|--textbox|--dselect
-			DIALOG+=("$DIABOX" "$LABEL" $HGHT $WDTH);
+			DIALOG+=("$DIABOX" "$LABEL" $DIAHIGT $DIAWIDT);
 		fi;
 		# Set DIALVL Menu path
 		local lvl=$([ -n "$DIALID" ] && echo "$DIALVL" |\
@@ -1030,7 +1048,7 @@ function _adbman_appinfo_dumpview(){
 	done
 }
 
-#»APP SIZE
+#»APP DIASIZE
 #»Get App info from: adb shell dumpsys diskstats
 #»Called from _adbman_appinfo
 function _adbman_appinfo_size(){
@@ -1183,7 +1201,7 @@ function _adbman_appinfo(){
 	_tifu _adbman_appinfo_size; # Get storage size
 }
 
-#»SIZE FORMAT
+#»DIASIZE FORMAT
 #»Format data size to B/MB/GB
 function _adbman_sizeformat(){
 	if [ $1 -gt 999999999 ]; then
@@ -1250,7 +1268,7 @@ function _adbman_dselect(){
 eval "$CLEARDIAVARS";
 DTITLE='Choose Directory'; 
 DIABOX='--dselect'; DIALID='DirSelect' LABEL="$1";
-# HGHT=30; WDTH=50;
+# DIAHIGT=30; DIAWIDT=50;
 _adbman_dialog
 if [ ! -d "$DINPUT" ]; then
 	DIABOX='--yesno'; DIALID='DirCreate'
@@ -1667,7 +1685,7 @@ function _adbman_applist_menu(){
 		DTITLE="Application List [User:$DEVUSER|Apps:$APPLFN/$APPLTN] ${SORT[$s]}"
 		DIABOX='--menu'; DIALID='AppList';
 		BTLXT='Filter'; BTLCL='Back';
-		# WDTH=-1; HGHT=-1;
+		# DIAWIDT=-1; DIAHIGT=-1;
 		BTLHL="${SORT[$(($s+1))]}";
 		MENU="$APPLFD"
 		LABEL="\ZuStatus Filters\Zn:$APPCH1"
@@ -1748,7 +1766,7 @@ function _adbman_settings_menu(){
 	local -a BTLIST=( 'GLOBAL' 'SECURE' 'SYSTEM' );
 	local -a STLIST=( 'DEVSGLO' 'DEVSSEC' 'DEVSSYS' );
 	local -i BSTATE=1 LSTATE=0
-	local CURSET='' CURVAL=''
+	local CURSET='' CURVAL='' CURTAG=''
 	local STATESW=\
 '((LSTATE++)); [ $LSTATE -eq 3 ] && LSTATE=0;
 ((BSTATE++)); [ $BSTATE -eq 3 ] && BSTATE=0;'
@@ -1772,15 +1790,16 @@ function _adbman_settings_menu(){
 		_adbman_dialog;
 		case $DIACODE in
 		0)#${DIALOG_OK-0})
-			eval "$CLEARDIABTTN";
-			BTLXT='Edit'; BTLHL='Clear';
+			eval "$CLEARDIABTTN"
+			CURTAG="$DITAG"; DITAG='';
 			MENU="$(echo "$MENU" |\
-				sed -n "/^$DITAG${chs}/{s/^$DITAG${chs}//;s/${chc}/${chs}/;p}")"
+				sed -n "/^$CURTAG${chs}/{s/^$CURTAG${chs}//;s/${chc}/${chs}/;p}")"
 			CURSET="${MENU//$chs*/}"
 			CURVAL="${MENU//*$chs/}"
 			LABEL="$LABEL\n\nCurrent [${BTLIST[$LSTATE]}] setting:\n$CURSET=$CURVAL"
 			DINPUT="$CURVAL";
 			while true; do
+				BTLXT='Edit'; BTLHL='Clear';
 				DIABOX='--inputmenu'; DIALID='Edit'; _adbman_dialog;
 				case $DIACODE in
 				0)#OK
@@ -1803,7 +1822,7 @@ function _adbman_settings_menu(){
 			if [ $APPSX -ne 0 ]; then
 			eval "$CLEARDIABTTN";
 				ADBOPT="adb shell settings put --user $DEVUSER ${BTLIST[$LSTATE]} $DITAG $DINPUT"
-				LABEL="$LABEL\n\nModify  [${BTLIST[$LSTATE]}] setting:\n$CURSET=$DINPUT"
+				LABEL="$LABEL\n\nModified [${BTLIST[$LSTATE]}] setting:\n$CURSET=$DINPUT"
 				LABEL="$LABEL\n\nExecute:\n>$ADBOPT"
 				DIABOX="--msgbox"; DIALID='Message'; _adbman_dialog;
 			fi
