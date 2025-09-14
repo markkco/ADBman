@@ -33,7 +33,11 @@ function _adbman_check(){
 	[ $EADB -ne 0 ] &&\
 		echo "'adb' not found! Ensure 'adb' is in PATH!" &&\
 	exit $EADB
-	CADB="$(adb shell whoami 2>/dev/null)"
+	DEVTID="$(adb devices -l | sed -n '1d;p' | sed -n '1s/.*transport_id:\(.*\).*/\1/p')"
+	[ "$DEVTID" == "" ] &&\
+		echo "adb not connected! Transport_id:[$DEVTID]. Check: 'adb devices'!" && exit $EADB ||\
+		echo "Using transport_id:$DEVTID"
+	CADB="$(adb -t$DEVTID shell whoami 2>/dev/null)"
 	EADB=$?
 	[ $EADB -ne 0 ] &&\
 		echo "adb not connected! Check: 'adb devices'!" &&\
@@ -303,6 +307,7 @@ LBLV="|DIALID=$DIALID|DIALVL=$DIALVL|\n";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
 [ -n "$DITAG" ] && LBLV+="|DITAG=$DITAG|";
 [ -n "$DINPUT" ] && LBLV+="|DINPUT=$DINPUT|";
+[ -n "$ADEVICE" ] && LBLV+="\n|ADEVICE=$ADEVICE|";
 [ -n "$DEVUSER" ] && LBLV+="\n|DEVUSER=$DEVUSER|";
 [ -n "$APPNAME" ] && LBLV+="|APPNAME=$APPNAME||APPIX=$APPIX||APPLX=$APPLX|";
 [ -n "$DIASTATE" ] &&\
@@ -518,7 +523,7 @@ function _adbman_userdata(){
 	# [ ! -d "$ADBMANB" ] && mkdir "$ADBMANB"
 	[ ! -f "$ADBMANC" ] && touch "$ADBMANC"
 	[ ! -f "$ADBMANL" ] && touch "$ADBMANL"
-	# [ ! -f "$ADBMAND" ] && adb shell pm dump 0 |\
+	# [ ! -f "$ADBMAND" ] && adb -t$DEVTID shell pm dump 0 |\
 	# sed -n '/^Packages/,/^Queries/p' >"$ADBMAND"
 }
 _tifu _adbman_userdata
@@ -526,12 +531,18 @@ _tifu _adbman_userdata
 
 #»MENU LISTS
 function _adbman_menuvars(){
+#»Devices Menu List Dialog
+MANDEV="$(adb devices -l | sed -n '1d;p' |\
+	sed -n "s/\(.*\)\s\+device product:\(.*\)\s\+model:\(.*\)\s\+device:\(.*\)\s\+transport_id:\(.*\).*/\5${chs}\4(\3)@\1${chs}off/p" |
+	sed 's/\s\+//g')"
+#»Parafunc: set DEVICE to 'on' in MENU
+MANDEVMENU='MENU=$(echo "$MANDEV" | sed "/^$DEVTID/s/${chs}off/${chs}on/")'
 #»Options Menu List Dialog
 MANOPT=\
 "1${chs}Config Directory
 2${chs}Paralog"
 #»Users Menu List Dialog
-MANUSR="$(adb shell pm list users |\
+MANUSR="$(adb -t$DEVTID shell pm list users |\
 	sed -n 's/.*{\(.*\)}.*/\1/p' |\
 	sed "s/:/ [/2;s/$/]${chs}off/;s/:/${chs}/g")"
 #»Parafunc: set DEVUSER to 'on' in MENU
@@ -540,6 +551,7 @@ MANUSRMENU='MENU=$(echo "$MANUSR" | sed "/^$DEVUSER/s/${chs}off/${chs}on/")'
 MANMLD=\
 "A${chs}Applications [APPLTN]
 B${chs}Backup and Restore
+D${chs}Device [DEVTID]
 H${chs}History Log
 L${chs}Log
 O${chs}Options
@@ -548,7 +560,7 @@ S${chs}Settings [Demo]
 T${chs}Tasks
 U${chs}User [DEVUSER]"
 #»Parafunc: set App Count and active user in MANMLD
-MANMLDMENU='MENU=$(echo "$MANMLD" | sed "s/APPLTN/$APPLTN/;s/DEVUSER/$DEVUSER/")'
+MANMLDMENU='MENU=$(echo "$MANMLD" | sed "s/APPLTN/$APPLTN/;s/DEVTID/$DEVTID/;s/DEVUSER/$DEVUSER/")'
 #_App List Filtered Dialog; Total/Filtered Number
 APPLFD=''; APPLTN=0; APPLFN=0;
 #»App Menu List Dialog
@@ -700,6 +712,8 @@ _tifu _adbman_menuvars
 
 #»DATA VARS
 function _adbman_datavars(){
+#»Device
+ADEVICE=0; ADEVICE=$(echo "$MANDEV" | sed -n "/^0\\|Owner/s/${chs}.*${chs}.*$//p")
 #»User
 DEVUSER=0; DEVUSER=$(echo "$MANUSR" | sed -n "/^0\\|Owner/s/${chs}.*${chs}.*$//p")
 #»Device Settings: Global; Secure; System
@@ -737,9 +751,9 @@ _tifu _adbman_datavars
 # echo "$(date +'[%T:%N]')>_adbman_datavars"
 
 #»DUMP PACKAGES
-#»Create list of packages from: adb shell pm dump
+#»Create list of packages from: adb -t$DEVTID shell pm dump
 function _adbman_dumppackages(){
-	PKGDUMP=$(adb shell pm dump 0 |\
+	PKGDUMP=$(adb -t$DEVTID shell pm dump 0 |\
 	sed -n '/^Packages/,/^Queries/p' |\
 	sed '1d;$d;/^$/d;s/^\s\+/;/g' |\
 	sed "/^;User/{/User $DEVUSER.*/!d}" |\
@@ -1014,7 +1028,7 @@ function _adbman_appinfo_dumpview(){
 	BTLYS=''; BTLNO='';
 	while true; do
 	if [ ! -f "$ADBMANP/$APPNAME" ]; then
-		ADBOPT="adb shell pm dump $APPNAME >$ADBMANP/$APPNAME"
+		ADBOPT="adb -t$DEVTID shell pm dump $APPNAME >$ADBMANP/$APPNAME"
 		eval "$ADBOPT"
 		DIACODE=$?;
 		_adbman_log "[\$]$ADBOPT"
@@ -1049,10 +1063,10 @@ function _adbman_appinfo_dumpview(){
 }
 
 #»APP DIASIZE
-#»Get App info from: adb shell dumpsys diskstats
+#»Get App info from: adb -t$DEVTID shell dumpsys diskstats
 #»Called from _adbman_appinfo
 function _adbman_appinfo_size(){
-	local DS="$(adb shell dumpsys diskstats)";
+	local DS="$(adb -t$DEVTID shell dumpsys diskstats)";
 	local -a DSN DSA DSD DSC;
 	local -i DSI=0;
 	# Parse App size data
@@ -1160,7 +1174,7 @@ function _adbman_appinfo(){
 		sed -n "/$APPNAME[^\\.].*.adb$/p")"
 	# Dump Package
 	[ -z "$APPNAME" ] && echo "APPNAME empty!" && exit 1;
-	APPSTATS="$(adb shell pm dump $APPNAME |\
+	APPSTATS="$(adb -t$DEVTID shell pm dump $APPNAME |\
 		sed '/^Queries/q')";
 	APPACTTS="$(echo "$APPSTATS" |\
 		sed -n '/^Activity Resolver/,/^Packages/{p;!q}' |\
@@ -1391,11 +1405,12 @@ function _adbman_appback_menu(){
 					sed -n "s/.${chs}\(\S\+\)${chs}.*${chs}on/-\1/p")"
 				# If split option is off: all args on 1 line; else: each line)
 				[ -n "$(sed -n "/E${chs}.*${chs}off/p" <<<"$APPFBD")" ] &&\
-					ADBOPT="adb backup ${ADBOPT//$'\n'/' '} -f <file>${ADBOPT//$'\n'/}.adb <package>" ||\
+					ADBOPT="adb <device> backup ${ADBOPT//$'\n'/' '} -f <file>${ADBOPT//$'\n'/}.adb <package>" ||\
 					ADBOPT="$(echo "$ADBOPT" |\
-						sed 's/\(-\S\+\)/adb backup \1 -f <file>\1.adb <package>/')";
+						sed 's/\(-\S\+\)/adb <device> backup \1 -f <file>\1.adb <package>/')";
 				# Set <package> and <time>
 				ADBOPT="$(echo "$ADBOPT" |\
+					sed "s/<device>/-t$DEVTID/g" |\
 					sed "s+<file>+$ADBMANA/$ADBMANF+g" |\
 					sed "s/<time>/$(date +'%Y%m%d%H%M')/g" |\
 					sed "s+<package>+$APPNAME+g")"
@@ -1439,7 +1454,7 @@ function _adbman_appback_menu(){
 						if [ -n "$DITAG" ]; then
 							eval "$RETCHECKLIST"; # Get selected Backups as MENU list 
 							ADBOPT="$(echo "$MENU" |\
-								sed "s![0-9]\\+${chs}.!adb restore $ADBMANB/!g;s/${chs}on$//g")"
+								sed "s![0-9]\\+${chs}.!adb -t$DEVTID restore $ADBMANB/!g;s/${chs}on$//g")"
 							LABEL="$LABEL\n\nRestore:"
 							LABEL="$LABEL\n${ADBOPT//$'\n'/'\n'}"
 							DIABOX='--yesno'; DIALID='Confirm'; _adbman_dialog;
@@ -1520,7 +1535,7 @@ function _adbman_appperms_menu(){
 				# Exec perms if DIACODE = 0
 				if [ $DIACODE -eq 0 ]; then
 					ADBOPT=$(echo "$ADBOPT" |\
-						sed -e 's/^/adb shell pm /' \
+						sed -e "s/^/adb -t$DEVTID shell pm /" \
 								-e "s/<package>/$APPNAME/");
 					ADBOPT=$(_adbman_exec);
 					APPIX=$?;
@@ -1579,7 +1594,7 @@ if [ -n "$ADBOPT" ]; then
 			sed -n "/$DITAG/s/.*(\(.*\)).*/\1/p")
 	# Execute ADBOPT and display output msgbox
 	if [ $DIACODE -eq 0 ]; then
-		ADBOPT="adb shell pm $ADBOPT $APPNAME"
+		ADBOPT="adb -t$DEVTID shell pm $ADBOPT $APPNAME"
 		MENU=''; DIABOX='--msgbox'; DIALID='Message'
 		eval "$SETLABELAPP"
 		LABEL="$LABEL\n$(_adbman_exec)"
@@ -1778,9 +1793,9 @@ function _adbman_settings_menu(){
 		LABEL="\Zu\Z1WARNING: Editing device settings can be dangerous!\Zn"
 		LABEL+="\n\Z3This is a work in progress. Only browsing is currently available. Changing is not available yet!\Zn"
 		if [ $APPSX -ne 0 ]; then
-			DEVSGLO="$(adb shell settings list --user $DEVUSER global)";
-			DEVSSEC="$(adb shell settings list --user $DEVUSER secure)";
-			DEVSSYS="$(adb shell settings list --user $DEVUSER system)";
+			DEVSGLO="$(adb -t$DEVTID shell settings list --user $DEVUSER global)";
+			DEVSSEC="$(adb -t$DEVTID shell settings list --user $DEVUSER secure)";
+			DEVSSYS="$(adb -t$DEVTID shell settings list --user $DEVUSER system)";
 			APPSX=0;
 		fi
 		MENU="$(_adbman_settings_parse "${!STLIST[$LSTATE]}")"
@@ -1821,7 +1836,7 @@ function _adbman_settings_menu(){
 			done
 			if [ $APPSX -ne 0 ]; then
 			eval "$CLEARDIABTTN";
-				ADBOPT="adb shell settings put --user $DEVUSER ${BTLIST[$LSTATE]} $DITAG $DINPUT"
+				ADBOPT="adb -t$DEVTID shell settings put --user $DEVUSER ${BTLIST[$LSTATE]} $DITAG $DINPUT"
 				LABEL="$LABEL\n\nModified [${BTLIST[$LSTATE]}] setting:\n$CURSET=$DINPUT"
 				LABEL="$LABEL\n\nExecute:\n>$ADBOPT"
 				DIABOX="--msgbox"; DIALID='Message'; _adbman_dialog;
@@ -1834,6 +1849,39 @@ function _adbman_settings_menu(){
 			break
 			;;
 		esac
+	done
+}
+
+#»DEVICE MENU
+#»Select Device Dialog
+function _adbman_device(){
+	APPLX=0;
+	eval "$CLEARDIAVARS";
+	DTITLE="Device List [Device:$DEVTID]"
+	DIABOX='--radiolist'; DIALID='Device';
+	BTLCL='Back'; APPLX=0;
+	eval "$MANDEVMENU" # Create MENU from MANDEV
+	LABEL="\ZuChoose Device Transport ID\Zn:"
+	while true; do
+		_adbman_dialog;
+		case $DIACODE in
+		0)#${DIALOG_OK-0})
+			if [ "$DEVTID" != "$DIAOUT" ]; then
+				APPLX=1; APPIX=1;
+				ADEVICE=$DIAOUT;
+			fi
+			;;
+		*)#Cancel
+			break
+			;;
+		esac
+		# If APPLX changed then refresh PKGLIST, set APPLX=0
+		if [ $APPLX -eq 1 ]; then
+			_tifu _adbman_dumppackages
+			_tifu _adbman_appfilter
+			APPLX=0
+			break
+		fi;
 	done
 }
 
@@ -1901,6 +1949,9 @@ function _adbman_main_menu(){
 				_adbman_applist_menu;
 				;;
 			'B')#Backup and Restore
+				;;
+			'D')#Select Device
+				_adbman_device
 				;;
 			'H')#History Log
 				eval "$CLEARDIAVARS";
