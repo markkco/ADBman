@@ -307,7 +307,7 @@ LBLV="|DIALID=$DIALID|DIALVL=$DIALVL|\n";
 [ -n "$DIAOUT" ] && LBLV+="\n|DIAOUT=$DIAOUT|";
 [ -n "$DITAG" ] && LBLV+="|DITAG=$DITAG|";
 [ -n "$DINPUT" ] && LBLV+="|DINPUT=$DINPUT|";
-[ -n "$ADEVICE" ] && LBLV+="\n|ADEVICE=$ADEVICE|";
+[ -n "$DEVTID" ] && LBLV+="\n|DEVTID=$DEVTID|";
 [ -n "$DEVUSER" ] && LBLV+="\n|DEVUSER=$DEVUSER|";
 [ -n "$APPNAME" ] && LBLV+="|APPNAME=$APPNAME||APPIX=$APPIX||APPLX=$APPLX|";
 [ -n "$DIASTATE" ] &&\
@@ -712,8 +712,6 @@ _tifu _adbman_menuvars
 
 #»DATA VARS
 function _adbman_datavars(){
-#»Device
-ADEVICE=0; ADEVICE=$(echo "$MANDEV" | sed -n "/^0\\|Owner/s/${chs}.*${chs}.*$//p")
 #»User
 DEVUSER=0; DEVUSER=$(echo "$MANUSR" | sed -n "/^0\\|Owner/s/${chs}.*${chs}.*$//p")
 #»Device Settings: Global; Secure; System
@@ -1868,7 +1866,7 @@ function _adbman_device(){
 		0)#${DIALOG_OK-0})
 			if [ "$DEVTID" != "$DIAOUT" ]; then
 				APPLX=1; APPIX=1;
-				ADEVICE=$DIAOUT;
+				DEVTID=$DIAOUT;
 			fi
 			;;
 		*)#Cancel
